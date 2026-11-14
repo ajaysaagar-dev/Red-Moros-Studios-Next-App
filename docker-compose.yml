@@ -5,20 +5,11 @@ services:
       dockerfile: Dockerfile
     container_name: redmoros-app
     restart: unless-stopped
-    ports:
-      - "3002:3002"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    network_mode: host
     environment:
       - NODE_ENV=production
       - PORT=3002
       - HOSTNAME=0.0.0.0
-      - PG_HOST=host.docker.internal
-      - PG_PORT=5432
-      - PG_USER=ajaysaagar
-      - PG_PASSWORD=aass209c
-      - PG_DB=redmoros
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-redmoros_admin_2026}
     env_file:
       - path: .env
         required: false
