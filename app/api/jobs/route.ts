@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 
-// GET /api/jobs - List all jobs
+// GET /api/jobs - List all jobs ordered by display_order
 export async function GET() {
   try {
     const result = await query(`
@@ -11,7 +11,7 @@ export async function GET() {
       FROM jobs j
       LEFT JOIN job_applications a ON j.id = a.job_id
       GROUP BY j.id
-      ORDER BY j.created_at DESC;
+      ORDER BY COALESCE(j.display_order, 999999) ASC, j.id ASC;
     `);
     return NextResponse.json({ success: true, jobs: result.rows });
   } catch (error: unknown) {
@@ -47,8 +47,11 @@ export async function POST(request: Request) {
 
     const result = await query(
       `
-      INSERT INTO jobs (title, description, department, location, type, status)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO jobs (title, description, department, location, type, status, display_order)
+      VALUES (
+        $1, $2, $3, $4, $5, $6,
+        (SELECT COALESCE(MAX(display_order), 0) + 1 FROM jobs)
+      )
       RETURNING *;
       `,
       [
@@ -105,7 +108,7 @@ export async function DELETE(request: Request) {
   }
 }
 
-// PATCH /api/jobs - Update job status
+// PATCH /api/jobs - Update job status or ordering
 export async function PATCH(request: Request) {
   try {
     const adminPassword = request.headers.get("x-admin-password");
@@ -117,21 +120,56 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json();
-    const { id, status } = body;
 
-    if (!id || !status) {
-      return NextResponse.json(
-        { success: false, error: "Job id and status are required" },
-        { status: 400 }
-      );
+    // Batch reorder jobs: body = { order: [id1, id2, id3, ...] }
+    if (Array.isArray(body.order)) {
+      const orderList = body.order as number[];
+      for (let i = 0; i < orderList.length; i++) {
+        await query("UPDATE jobs SET display_order = $1 WHERE id = $2;", [
+          i + 1,
+          parseInt(String(orderList[i]), 10),
+        ]);
+      }
+
+      const updated = await query(`
+        SELECT 
+          j.*, 
+          COUNT(a.id)::int as application_count 
+        FROM jobs j
+        LEFT JOIN job_applications a ON j.id = a.job_id
+        GROUP BY j.id
+        ORDER BY COALESCE(j.display_order, 999999) ASC, j.id ASC;
+      `);
+
+      return NextResponse.json({
+        success: true,
+        message: "Job ordering updated successfully",
+        jobs: updated.rows,
+      });
     }
 
-    const result = await query(
-      "UPDATE jobs SET status = $1 WHERE id = $2 RETURNING *;",
-      [status, parseInt(id, 10)]
-    );
+    // Single job display_order update
+    if (body.id && body.display_order !== undefined) {
+      const result = await query(
+        "UPDATE jobs SET display_order = $1 WHERE id = $2 RETURNING *;",
+        [parseInt(body.display_order, 10), parseInt(body.id, 10)]
+      );
+      return NextResponse.json({ success: true, job: result.rows[0] });
+    }
 
-    return NextResponse.json({ success: true, job: result.rows[0] });
+    // Single job status update
+    if (body.id && body.status) {
+      const result = await query(
+        "UPDATE jobs SET status = $1 WHERE id = $2 RETURNING *;",
+        [body.status, parseInt(body.id, 10)]
+      );
+      return NextResponse.json({ success: true, job: result.rows[0] });
+    }
+
+    return NextResponse.json(
+      { success: false, error: "Invalid update parameters provided" },
+      { status: 400 }
+    );
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Failed to update job";
     console.error("PATCH /api/jobs error:", error);

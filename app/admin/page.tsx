@@ -32,6 +32,9 @@ import {
   UserCheck,
   Ban,
   Clock,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
 } from "lucide-react";
 
 interface Job {
@@ -42,6 +45,7 @@ interface Job {
   type: string;
   description: string;
   status: string;
+  display_order?: number;
   application_count?: number;
   created_at: string;
 }
@@ -99,6 +103,10 @@ export default function AdminPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [copiedDiscord, setCopiedDiscord] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
+
+  // Job Reordering state
+  const [reordering, setReordering] = useState(false);
+  const [reorderSuccess, setReorderSuccess] = useState("");
 
   // Fetch jobs and applications using the verified admin key
   const fetchDataWithKey = async (key: string) => {
@@ -319,6 +327,59 @@ export default function AdminPage() {
       }
     } catch (err: unknown) {
       console.error("Toggle status error:", err);
+    }
+  };
+
+  // Move job up in list for Careers page order
+  const handleMoveJobUp = async (index: number) => {
+    if (index <= 0 || reordering) return;
+    const updated = [...jobs];
+    const item = updated[index];
+    updated[index] = updated[index - 1];
+    updated[index - 1] = item;
+    setJobs(updated);
+    await saveJobOrder(updated);
+  };
+
+  // Move job down in list for Careers page order
+  const handleMoveJobDown = async (index: number) => {
+    if (index >= jobs.length - 1 || reordering) return;
+    const updated = [...jobs];
+    const item = updated[index];
+    updated[index] = updated[index + 1];
+    updated[index + 1] = item;
+    setJobs(updated);
+    await saveJobOrder(updated);
+  };
+
+  // Persist updated job sequence to PostgreSQL
+  const saveJobOrder = async (orderedList: Job[]) => {
+    try {
+      setReordering(true);
+      const res = await fetch("/api/jobs", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": adminKey,
+        },
+        body: JSON.stringify({ order: orderedList.map((j) => j.id) }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (Array.isArray(data.jobs)) {
+          setJobs(data.jobs);
+        }
+        setReorderSuccess("Careers page order updated live!");
+        setTimeout(() => setReorderSuccess(""), 3000);
+      } else {
+        alert(data.error || "Failed to update job order");
+        fetchDataWithKey(adminKey);
+      }
+    } catch (err: unknown) {
+      console.error("Save job order error:", err);
+      fetchDataWithKey(adminKey);
+    } finally {
+      setReordering(false);
     }
   };
 
@@ -841,14 +902,35 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* TAB 3: MANAGE ROLES CATALOG */}
+            {/* TAB 3: MANAGE ROLES CATALOG & REORDERING */}
             {activeTab === "manage-jobs" && (
               <div className="space-y-4 text-left">
+                {/* Information Header & Reorder Notification */}
+                <div className="p-4 bg-[#151115] border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-mono text-xs">
+                  <div>
+                    <div className="text-white font-bold uppercase flex items-center gap-2">
+                      <ArrowUpDown className="w-4 h-4 text-[#FF0000]" />
+                      <span>CAREERS PAGE DISPLAY ORDER</span>
+                    </div>
+                    <div className="text-[#B8AEB1] text-[11px] mt-0.5">
+                      Use the Up / Down controls to reorder roles. The sequence below directly defines how roles appear on the public /careers page.
+                    </div>
+                  </div>
+
+                  {reorderSuccess && (
+                    <div className="px-3 py-1.5 bg-green-950/60 border border-green-500/60 text-green-300 font-mono text-xs flex items-center gap-1.5 shrink-0">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+                      <span>{reorderSuccess}</span>
+                    </div>
+                  )}
+                </div>
+
                 <div className="border border-white/10 overflow-hidden bg-[#151115]">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left font-mono text-xs">
                       <thead className="bg-[#17090D] border-b border-white/10 text-[#FF0000] uppercase text-[10px] tracking-wider">
                         <tr>
+                          <th className="py-3 px-4 text-center w-24">Order</th>
                           <th className="py-3 px-4">Role Title</th>
                           <th className="py-3 px-4">Department</th>
                           <th className="py-3 px-4">Location</th>
@@ -859,8 +941,33 @@ export default function AdminPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/5">
-                        {jobs.map((job) => (
+                        {jobs.map((job, index) => (
                           <tr key={job.id} className="hover:bg-white/[0.02] transition-colors">
+                            <td className="py-3 px-4">
+                              <div className="flex items-center justify-center gap-2">
+                                <span className="text-[11px] text-[#FF0000] font-bold w-6 text-center">
+                                  #{index + 1}
+                                </span>
+                                <div className="flex flex-col gap-0.5">
+                                  <button
+                                    onClick={() => handleMoveJobUp(index)}
+                                    disabled={index === 0 || reordering}
+                                    className="p-1 bg-[#09090C] border border-white/10 hover:border-[#FF0000] hover:text-[#FF0000] text-[#B8AEB1] transition-colors disabled:opacity-20 disabled:hover:border-white/10 disabled:hover:text-[#B8AEB1] cursor-pointer"
+                                    title="Move role up (higher on Careers page)"
+                                  >
+                                    <ArrowUp className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleMoveJobDown(index)}
+                                    disabled={index === jobs.length - 1 || reordering}
+                                    className="p-1 bg-[#09090C] border border-white/10 hover:border-[#FF0000] hover:text-[#FF0000] text-[#B8AEB1] transition-colors disabled:opacity-20 disabled:hover:border-white/10 disabled:hover:text-[#B8AEB1] cursor-pointer"
+                                    title="Move role down (lower on Careers page)"
+                                  >
+                                    <ArrowDown className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            </td>
                             <td className="py-3 px-4 font-bold text-white">{job.title}</td>
                             <td className="py-3 px-4 text-[#B8AEB1]">{job.department}</td>
                             <td className="py-3 px-4 text-[#B8AEB1]">{job.location}</td>

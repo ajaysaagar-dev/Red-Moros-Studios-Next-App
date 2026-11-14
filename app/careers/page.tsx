@@ -24,6 +24,7 @@ interface Job {
   type: string;
   description: string;
   status: string;
+  display_order?: number;
 }
 
 export default function CareersPage() {
