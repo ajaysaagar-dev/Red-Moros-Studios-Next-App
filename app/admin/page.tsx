@@ -449,19 +449,14 @@ export default function AdminPage() {
               <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-[#FF0000]" />
               <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-[#FF0000]" />
 
-              {/* Monogram / Header Badge */}
+              {/* Header Badge */}
               <div className="flex items-center justify-between pb-6 border-b border-white/10 mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 border border-[#FF0000] rotate-45 flex items-center justify-center bg-[#17090D]">
-                    <Lock className="w-4 h-4 text-[#FF0000] -rotate-45" />
+                <div>
+                  <div className="font-mono text-xs font-black tracking-widest text-white uppercase">
+                    RED MOROS STUDIOS
                   </div>
-                  <div>
-                    <div className="font-mono text-xs font-black tracking-widest text-white uppercase">
-                      RED MOROS STUDIOS
-                    </div>
-                    <div className="font-mono text-[9px] text-[#FF0000] tracking-[0.2em] uppercase font-bold">
-                      INTERNAL ADMIN CONSOLE
-                    </div>
+                  <div className="font-mono text-[9px] text-[#FF0000] tracking-[0.2em] uppercase font-bold">
+                    INTERNAL ADMIN CONSOLE
                   </div>
                 </div>
                 <div className="w-2 h-2 rounded-full bg-[#FF0000] animate-pulse" />

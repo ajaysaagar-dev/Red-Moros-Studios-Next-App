@@ -16,12 +16,6 @@ export default function Home() {
         <main className="flex-1 flex flex-col">
           {/* Hero Section: Exact ref.svg composition */}
           <CameraHero />
-
-          {/* The Game Experience: Story-driven psychological horror thriller with best visuals */}
-          <ExperienceSection />
-
-          {/* Notify Waitlist */}
-          <TransmissionConsole />
         </main>
 
         {/* Minimalist Editorial Footer */}
