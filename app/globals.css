@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@theme {
+  --color-obsidian: #09090C;
+  --color-burgundy: #17090D;
+  --color-crimson: #FF3348;
+  --color-blood: #A60019;
+  --color-softwhite: #F7F2F3;
+  --color-mutedgrey: #B8AEB1;
+  --color-panel: #151115;
+  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+}
+
+:root {
+  --background: #09090C;
+  --foreground: #F7F2F3;
+}
+
+/* LENIS SMOOTH SCROLLING CORE STYLES */
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
+}
+
+html {
+  scroll-behavior: smooth;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: #09090C;
+  color: #F7F2F3;
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  selection-background-color: #FF0000;
+  selection-color: #09090C;
+}
+
+::selection {
+  background-color: #FF0000;
+  color: #09090C;
+}
+
+/* Subtle Technical Grid Background */
+.bg-tech-grid {
+  background-image: 
+    linear-gradient(to right, rgba(255, 0, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 0, 0, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Hardware accelerated transform utility */
+.transform-gpu {
+  transform: translate3d(0, 0, 0);
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+/* Off-screen section rendering optimization */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 800px;
+}
+
+/* Slider custom styling */
+input[type="range"] {
+  accent-color: #FF0000;
+}
