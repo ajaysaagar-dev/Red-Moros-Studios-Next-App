@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 
+interface CVRow {
+  cv_filename: string;
+  cv_mimetype: string;
+  cv_data: string;
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -19,7 +25,7 @@ export async function GET(
       return new NextResponse("Unauthorized: Invalid admin credentials", { status: 401 });
     }
 
-    const result = await query(
+    const result = await query<CVRow>(
       "SELECT cv_filename, cv_mimetype, cv_data FROM job_applications WHERE id = $1;",
       [parseInt(id, 10)]
     );
@@ -38,7 +44,7 @@ export async function GET(
     const mimeType = cv_mimetype || "application/pdf";
     const disposition = action === "download" ? "attachment" : "inline";
 
-    return new NextResponse(fileBuffer, {
+    return new NextResponse(new Uint8Array(fileBuffer), {
       status: 200,
       headers: {
         "Content-Type": mimeType,

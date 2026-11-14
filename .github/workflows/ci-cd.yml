@@ -1,0 +1,73 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build & Typecheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type checking
+        run: npx tsc --noEmit
+
+      - name: Build Next.js application
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+          NODE_ENV: production
+        run: npm run build
+
+  deploy:
+    name: Auto Deploy to VPS
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Webhook Deployment
+        run: |
+          WEBHOOK_SECRET="${{ secrets.DEPLOY_WEBHOOK_SECRET || 'nanbenda_webhook_secret_2026' }}"
+          ENDPOINTS=(
+            "https://redmoros.ajaysaagar.online/webhook-redmoros?token=${WEBHOOK_SECRET}"
+            "https://teader.vedipocketpc.online/webhook-redmoros?token=${WEBHOOK_SECRET}"
+            "http://178.238.226.206:9000/webhook-redmoros?token=${WEBHOOK_SECRET}"
+          )
+
+          DEPLOYED=false
+          for URL in "${ENDPOINTS[@]}"; do
+            echo "Attempting deployment webhook: ${URL%%\?*}..."
+            HTTP_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${URL}" || true)
+            HTTP_BODY=$(echo "$HTTP_RESPONSE" | sed '$d')
+            HTTP_STATUS=$(echo "$HTTP_RESPONSE" | tail -n1)
+
+            echo "Response: $HTTP_STATUS ($HTTP_BODY)"
+            if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "202" ]; then
+              echo "Deployment successfully dispatched via ${URL%%\?*}!"
+              DEPLOYED=true
+              break
+            fi
+          done
+
+          if [ "$DEPLOYED" = false ]; then
+            echo "Failed to trigger deployment webhook on all endpoints."
+            exit 1
+          fi
