@@ -22,12 +22,12 @@ export default function TransmissionConsole() {
   return (
     <section
       id="notify"
-      className="relative py-20 sm:py-28 border-b border-[#FF0000]/20 bg-[#09090C] cv-auto"
+      className="relative py-14 sm:py-24 border-b border-[#FF0000]/20 bg-[#09090C]"
     >
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-12 relative z-10">
         
         {/* Box Container */}
-        <div className="bg-[#151115] border border-[#FF0000]/40 shadow-[0_0_50px_rgba(255,0,0,0.15)] relative p-6 sm:p-12">
+        <div className="bg-[#151115] border border-[#FF0000]/40 shadow-[0_0_50px_rgba(255,0,0,0.15)] relative p-5 sm:p-12">
           {/* Corner Highlights */}
           <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-[#FF0000]" />
           <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-[#FF0000]" />

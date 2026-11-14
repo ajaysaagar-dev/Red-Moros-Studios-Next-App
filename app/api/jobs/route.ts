@@ -11,7 +11,7 @@ export async function GET() {
       FROM jobs j
       LEFT JOIN job_applications a ON j.id = a.job_id
       GROUP BY j.id
-      ORDER BY COALESCE(j.display_order, 999999) ASC, j.id ASC;
+      ORDER BY j.created_at DESC;
     `);
     return NextResponse.json({ success: true, jobs: result.rows });
   } catch (error: unknown) {

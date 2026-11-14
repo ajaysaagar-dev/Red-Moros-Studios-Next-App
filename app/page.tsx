@@ -1,8 +1,6 @@
 import SmoothScroll from "@/components/SmoothScroll";
 import Navbar from "@/components/Navbar";
 import CameraHero from "@/components/CameraHero";
-import ExperienceSection from "@/components/ExperienceSection";
-import TransmissionConsole from "@/components/TransmissionConsole";
 import Footer from "@/components/Footer";
 
 export default function Home() {
@@ -13,7 +11,7 @@ export default function Home() {
         <Navbar />
 
         {/* Main Presentation based on ref.svg */}
-        <main className="flex-1 flex flex-col">
+        <main className="flex-1 flex flex-col justify-center">
           {/* Hero Section: Exact ref.svg composition */}
           <CameraHero />
         </main>

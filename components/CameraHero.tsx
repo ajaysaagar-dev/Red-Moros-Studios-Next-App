@@ -2,17 +2,15 @@
 
 import React, { useState } from "react";
 import VideoModal from "./VideoModal";
-import Link from "next/link";
-import { ArrowUpRight, Play, Briefcase } from "lucide-react";
 
 export default function CameraHero() {
   const [showreelOpen, setShowreelOpen] = useState(false);
 
   return (
-    <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-[#09090C]">
+    <section className="relative min-h-[80vh] sm:min-h-[90vh] flex items-center justify-center overflow-hidden bg-[#09090C] py-8 sm:py-20 lg:py-28">
       {/* MASSIVE CINEMATIC CRIMSON RADIAL BLOOM EXACTLY AS IN REF.SVG */}
       <div 
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-[130vw] h-[100vh] max-w-[2000px] pointer-events-none opacity-80"
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-[150vw] sm:w-[130vw] h-[100vh] max-w-[2000px] pointer-events-none opacity-80"
         style={{
           background: "radial-gradient(circle at 50% 0%, rgba(255, 0, 0, 0.6) 0%, rgba(153, 0, 0, 0.2) 48%, rgba(9, 9, 12, 0) 80%)",
         }}
@@ -22,23 +20,23 @@ export default function CameraHero() {
       <div className="absolute inset-0 bg-tech-grid opacity-60 pointer-events-none" />
 
       {/* Main Content Container */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-16 sm:py-20 lg:py-28">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-6 sm:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-8 items-center">
           
-          {/* LEFT COLUMN: THE ICONIC RED MOROS STUDIOS + COMING SOON... */}
+          {/* LEFT COLUMN: THE ICONIC RED MOROS */}
           <div className="lg:col-span-7 flex flex-col justify-center select-none text-left">
             
             {/* Top Tag */}
-            <div className="flex items-center gap-2 mb-4">
-              <span className="w-2 h-2 rounded-full bg-[#FF0000]" />
-              <span className="font-mono text-[10px] sm:text-xs text-[#FF0000] tracking-[0.3em] uppercase font-bold">
+            <div className="flex items-center gap-2 mb-3 sm:mb-4">
+              <span className="w-2 h-2 rounded-full bg-[#FF0000] shrink-0" />
+              <span className="font-mono text-[9px] sm:text-xs text-[#FF0000] tracking-[0.2em] sm:tracking-[0.3em] uppercase font-bold">
                 {"RED MOROS STUDIOS // Unknown 13 [Psychological Horror Game]"}
               </span>
             </div>
 
             {/* Giant Monolithic Brand Headline matching ref.svg */}
             <div className="flex flex-col tracking-tighter leading-[0.88]">
-              {/* Row 1: "RED" in White + "STUDIOS" in Yellow (#FFF700) */}
+              {/* Row 1: "RED" in White */}
               <div className="flex items-baseline gap-3 sm:gap-6 flex-wrap">
                 <span className="font-mono text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black text-white tracking-tight uppercase">
                   RED

@@ -35,7 +35,7 @@ export default function ExperienceSection() {
   ];
 
   return (
-    <section className="relative py-20 sm:py-28 border-b border-[#FF0000]/20 bg-[#09090C] overflow-hidden cv-auto">
+    <section className="relative py-14 sm:py-24 border-b border-[#FF0000]/20 bg-[#09090C] overflow-hidden">
       {/* Ambient background glow */}
       <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[350px] sm:w-[600px] h-[350px] sm:h-[500px] bg-[#990000]/20 blur-[160px] pointer-events-none" />
 

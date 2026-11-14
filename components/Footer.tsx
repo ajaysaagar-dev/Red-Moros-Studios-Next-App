@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { ArrowUp, Briefcase, Shield } from "lucide-react";
+import { ArrowUp, Briefcase } from "lucide-react";
 
 export default function Footer() {
   const scrollToTop = () => {
@@ -10,7 +10,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="relative bg-[#09090C] border-t border-[#FF0000]/20 py-12 sm:py-16 overflow-hidden cv-auto">
+    <footer className="relative bg-[#09090C] border-t border-[#FF0000]/20 py-10 sm:py-16 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 relative z-10 space-y-8">
         
         {/* Brand & Narrative */}

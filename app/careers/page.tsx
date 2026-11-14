@@ -162,17 +162,17 @@ export default function CareersPage() {
       <div className="min-h-screen bg-[#09090C] text-[#F7F2F3] flex flex-col font-sans selection:bg-[#FF0000] selection:text-[#09090C]">
         <Navbar />
 
-        <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-16 sm:py-24 w-full">
+        <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-10 sm:py-20 w-full">
           {/* Top Header */}
-          <div className="space-y-4 mb-16 text-left border-b border-white/5 pb-10">
+          <div className="space-y-3 sm:space-y-4 mb-10 sm:mb-16 text-left border-b border-white/5 pb-8 sm:pb-10">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#FF0000]" />
-              <span className="font-mono text-xs text-[#FF0000] tracking-widest uppercase font-bold">
+              <span className="w-2 h-2 rounded-full bg-[#FF0000] animate-pulse" />
+              <span className="font-mono text-[10px] sm:text-xs text-[#FF0000] tracking-widest uppercase font-bold">
                 {"THE FOUNDRY // CAREERS"}
               </span>
             </div>
 
-            <h1 className="text-4xl sm:text-6xl font-mono font-black uppercase tracking-tight text-white">
+            <h1 className="text-3xl sm:text-6xl font-mono font-black uppercase tracking-tight text-white">
               JOIN RED MOROS <span className="text-[#FF0000]">STUDIOS</span>
             </h1>
 
@@ -248,8 +248,8 @@ export default function CareersPage() {
 
         {/* Application Modal */}
         {selectedJob && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/90 backdrop-blur-md overflow-y-auto">
-            <div className="relative w-full max-w-2xl bg-[#151115] border border-[#FF0000]/50 p-6 sm:p-10 text-left my-8 shadow-[0_0_50px_rgba(255,0,0,0.15)]">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md overflow-y-auto">
+            <div className="relative w-full max-w-2xl bg-[#151115] border border-[#FF0000]/50 p-5 sm:p-10 text-left my-auto max-h-[92vh] overflow-y-auto shadow-[0_0_50px_rgba(255,0,0,0.15)]">
               {/* Corner Accents */}
               <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-[#FF0000]" />
               <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-[#FF0000]" />

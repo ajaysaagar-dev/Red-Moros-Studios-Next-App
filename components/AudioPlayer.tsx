@@ -94,13 +94,13 @@ export default function AudioPlayer() {
   return (
     <button
       onClick={toggleAudio}
-      className="group flex items-center gap-2 px-2.5 py-1 text-xs font-mono tracking-wider border border-[#FF3348]/20 bg-[#151115]/80 hover:border-[#FF3348]/60 hover:bg-[#17090D] transition-all duration-200 cursor-pointer text-[#B8AEB1] hover:text-[#F7F2F3]"
+      className="group flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1 text-xs font-mono tracking-wider border border-[#FF3348]/20 bg-[#151115]/80 hover:border-[#FF3348]/60 hover:bg-[#17090D] transition-all duration-200 cursor-pointer text-[#B8AEB1] hover:text-[#F7F2F3] shrink-0"
       title={isPlaying ? "Mute Atmospheric Drone" : "Initialize Atmospheric Audio Drone"}
     >
       {isPlaying ? (
         <>
           <Volume2 className="w-3.5 h-3.5 text-[#FF3348] animate-pulse" />
-          <span className="text-[11px] text-[#FF3348] font-bold">ATMOSPHERE: ACTIVE</span>
+          <span className="hidden sm:inline text-[11px] text-[#FF3348] font-bold">ATMOSPHERE: ACTIVE</span>
           <div className="flex items-end gap-0.5 h-2.5">
             <span className="w-0.5 bg-[#FF3348] h-full animate-[ping_1.2s_cubic-bezier(0,0,0.2,1)_infinite]" />
             <span className="w-0.5 bg-[#FF3348] h-2/3 animate-[pulse_1.5s_ease-in-out_infinite]" />
@@ -110,7 +110,8 @@ export default function AudioPlayer() {
       ) : (
         <>
           <VolumeX className="w-3.5 h-3.5 text-[#B8AEB1] group-hover:text-[#FF3348] transition-colors" />
-          <span className="text-[11px]">AUDIO AMBIENCE // OFF</span>
+          <span className="hidden sm:inline text-[11px]">AUDIO AMBIENCE // OFF</span>
+          <span className="inline sm:hidden text-[10px]">SFX</span>
         </>
       )}
     </button>
