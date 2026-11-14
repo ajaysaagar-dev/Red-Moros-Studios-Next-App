@@ -28,6 +28,10 @@ import {
   KeyRound,
   ShieldAlert,
   ArrowLeft,
+  Mail,
+  UserCheck,
+  Ban,
+  Clock,
 } from "lucide-react";
 
 interface Job {
@@ -48,12 +52,14 @@ interface Application {
   job_title: string;
   first_name: string;
   last_name: string;
+  email?: string;
   years_of_experience: number;
   discord_username: string;
   portfolio_link: string | null;
   linkedin_profile: string | null;
   cv_filename: string;
   cv_mimetype: string;
+  status: string;
   created_at: string;
 }
 
@@ -73,6 +79,10 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
 
+  // Status & action states
+  const [updatingStatusId, setUpdatingStatusId] = useState<number | null>(null);
+  const [deletingAppId, setDeletingAppId] = useState<number | null>(null);
+
   // New Job Form State
   const [newTitle, setNewTitle] = useState("");
   const [newDepartment, setNewDepartment] = useState("Engineering");
@@ -86,7 +96,9 @@ export default function AdminPage() {
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [copiedDiscord, setCopiedDiscord] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState(false);
 
   // Fetch jobs and applications using the verified admin key
   const fetchDataWithKey = async (key: string) => {
@@ -159,6 +171,72 @@ export default function AdminPage() {
     setJobs([]);
     setApplications([]);
     setSelectedApp(null);
+  };
+
+  // Handle Update Candidate Status
+  const handleUpdateAppStatus = async (id: number, newStatus: string) => {
+    try {
+      setUpdatingStatusId(id);
+      const res = await fetch("/api/applications", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": adminKey,
+        },
+        body: JSON.stringify({ id, status: newStatus }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setApplications((prev) =>
+          prev.map((app) => (app.id === id ? { ...app, status: newStatus } : app))
+        );
+        if (selectedApp && selectedApp.id === id) {
+          setSelectedApp((prev) => (prev ? { ...prev, status: newStatus } : null));
+        }
+      } else {
+        alert(data.error || "Failed to update candidate status.");
+      }
+    } catch (err: unknown) {
+      console.error("Status update error:", err);
+      alert("Network error updating candidate status.");
+    } finally {
+      setUpdatingStatusId(null);
+    }
+  };
+
+  // Handle Delete Candidate Application
+  const handleDeleteApplication = async (id: number) => {
+    if (
+      !confirm(
+        "Are you sure you want to permanently delete this candidate application and their CV dossier? This cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setDeletingAppId(id);
+      const res = await fetch(`/api/applications?id=${id}`, {
+        method: "DELETE",
+        headers: { "x-admin-password": adminKey },
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setApplications((prev) => prev.filter((a) => a.id !== id));
+        if (selectedApp && selectedApp.id === id) {
+          setSelectedApp(null);
+        }
+      } else {
+        alert(data.error || "Failed to delete candidate application.");
+      }
+    } catch (err: unknown) {
+      console.error("Delete application error:", err);
+      alert("Network error deleting candidate application.");
+    } finally {
+      setDeletingAppId(null);
+    }
   };
 
   // Handle Create Job
@@ -251,17 +329,40 @@ export default function AdminPage() {
     setTimeout(() => setCopiedDiscord(false), 2000);
   };
 
+  // Copy candidate email
+  const handleCopyEmail = (email: string) => {
+    navigator.clipboard.writeText(email);
+    setCopiedEmail(true);
+    setTimeout(() => setCopiedEmail(false), 2000);
+  };
+
+  // Status badge styling helper
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "Selected":
+        return "bg-emerald-950/60 border border-emerald-500/60 text-emerald-400";
+      case "Reviewed":
+        return "bg-sky-950/60 border border-sky-500/60 text-sky-400";
+      case "Rejected":
+        return "bg-rose-950/60 border border-rose-500/60 text-rose-400";
+      default:
+        return "bg-amber-950/60 border border-amber-500/60 text-amber-400";
+    }
+  };
+
   // Filtered applications
   const filteredApplications = applications.filter((app) => {
     const matchesRole = roleFilter === "ALL" || app.job_title === roleFilter;
+    const matchesStatus = statusFilter === "ALL" || (app.status || "Pending") === statusFilter;
     const q = searchQuery.toLowerCase();
     const matchesSearch =
       !searchQuery ||
       app.first_name.toLowerCase().includes(q) ||
       app.last_name.toLowerCase().includes(q) ||
+      (app.email && app.email.toLowerCase().includes(q)) ||
       app.discord_username.toLowerCase().includes(q) ||
       app.job_title.toLowerCase().includes(q);
-    return matchesRole && matchesSearch;
+    return matchesRole && matchesStatus && matchesSearch;
   });
 
   return (
@@ -396,7 +497,7 @@ export default function AdminPage() {
                   STUDIO RECRUITMENT <span className="text-[#FF0000]">MANAGEMENT</span>
                 </h1>
                 <p className="font-mono text-xs sm:text-sm text-[#B8AEB1] font-light">
-                  Manage studio role postings, inspect candidate dossiers, and review uploaded CVs in high-resolution.
+                  Manage candidate applications, update candidate status, review CV dossiers, and control studio role postings.
                 </p>
               </div>
 
@@ -468,13 +569,14 @@ export default function AdminPage() {
                     <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#B8AEB1]" />
                     <input
                       type="text"
-                      placeholder="Search candidates by name, Discord, or role..."
+                      placeholder="Search candidates by name, email, Discord, or role..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full bg-[#151115] border border-white/10 pl-10 pr-4 py-2.5 text-xs font-mono text-white focus:outline-none focus:border-[#FF0000] placeholder:text-[#B8AEB1]/40"
                     />
                   </div>
 
+                  {/* Filter by Role */}
                   <div className="flex items-center gap-2">
                     <Filter className="w-4 h-4 text-[#FF0000]" />
                     <select
@@ -488,6 +590,21 @@ export default function AdminPage() {
                           {j.title}
                         </option>
                       ))}
+                    </select>
+                  </div>
+
+                  {/* Filter by Status */}
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="bg-[#151115] border border-white/10 px-3 py-2.5 text-xs font-mono text-white focus:outline-none focus:border-[#FF0000]"
+                    >
+                      <option value="ALL">ALL STATUSES</option>
+                      <option value="Pending">Pending</option>
+                      <option value="Reviewed">Reviewed</option>
+                      <option value="Selected">Selected</option>
+                      <option value="Rejected">Rejected</option>
                     </select>
                   </div>
                 </div>
@@ -510,6 +627,7 @@ export default function AdminPage() {
                             <th className="py-3 px-4">Candidate</th>
                             <th className="py-3 px-4">Role Applied</th>
                             <th className="py-3 px-4">Experience</th>
+                            <th className="py-3 px-4">Status</th>
                             <th className="py-3 px-4">Discord</th>
                             <th className="py-3 px-4">CV Document</th>
                             <th className="py-3 px-4">Applied Date</th>
@@ -523,8 +641,18 @@ export default function AdminPage() {
                               onClick={() => setSelectedApp(app)}
                               className="hover:bg-white/[0.03] cursor-pointer transition-colors group"
                             >
-                              <td className="py-3 px-4 text-white font-bold group-hover:text-[#FF0000] transition-colors">
-                                {app.first_name} {app.last_name}
+                              <td className="py-3 px-4">
+                                <div className="text-white font-bold group-hover:text-[#FF0000] transition-colors">
+                                  {app.first_name} {app.last_name}
+                                </div>
+                                {app.email ? (
+                                  <div className="text-[11px] text-[#B8AEB1] font-normal flex items-center gap-1.5 mt-0.5">
+                                    <Mail className="w-3 h-3 text-[#FF0000] shrink-0" />
+                                    <span className="truncate max-w-[180px]">{app.email}</span>
+                                  </div>
+                                ) : (
+                                  <div className="text-[10px] text-white/30 font-normal">No email on record</div>
+                                )}
                               </td>
                               <td className="py-3 px-4 text-[#B8AEB1]">
                                 <span className="px-2 py-0.5 bg-white/5 border border-white/10 text-[10px]">
@@ -533,6 +661,15 @@ export default function AdminPage() {
                               </td>
                               <td className="py-3 px-4 text-[#F7F2F3]">
                                 <span className="font-bold text-[#FF0000]">{app.years_of_experience}</span> YRS
+                              </td>
+                              <td className="py-3 px-4">
+                                <span
+                                  className={`px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider inline-block ${getStatusBadge(
+                                    app.status || "Pending"
+                                  )}`}
+                                >
+                                  {app.status || "Pending"}
+                                </span>
                               </td>
                               <td className="py-3 px-4 text-[#B8AEB1] font-mono">
                                 <span className="bg-[#09090C] px-2 py-0.5 border border-white/5 text-[11px]">
@@ -549,15 +686,28 @@ export default function AdminPage() {
                                 {new Date(app.created_at).toLocaleDateString()}
                               </td>
                               <td className="py-3 px-4 text-right">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedApp(app);
-                                  }}
-                                  className="px-2.5 py-1 bg-white/5 hover:bg-[#FF0000] hover:text-[#09090C] text-[10px] font-bold uppercase transition-colors"
-                                >
-                                  VIEW DOSSIER
-                                </button>
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedApp(app);
+                                    }}
+                                    className="px-2.5 py-1 bg-white/5 hover:bg-[#FF0000] hover:text-[#09090C] text-[10px] font-bold uppercase transition-colors"
+                                  >
+                                    VIEW
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteApplication(app.id);
+                                    }}
+                                    disabled={deletingAppId === app.id}
+                                    className="p-1 text-[#B8AEB1] hover:text-[#FF0000] hover:bg-[#FF0000]/10 transition-colors disabled:opacity-40"
+                                    title="Delete candidate application"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -750,7 +900,7 @@ export default function AdminPage() {
           </main>
         )}
 
-        {/* CANDIDATE DOSSIER MODAL WITH CV PREVIEW & DOWNLOAD */}
+        {/* CANDIDATE DOSSIER MODAL WITH CV PREVIEW & STATUS MANAGEMENT */}
         {selectedApp && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
             <div className="relative w-full max-w-2xl bg-[#130E14] border border-[#FF0000]/60 p-6 sm:p-8 text-left shadow-[0_0_50px_rgba(255,0,0,0.25)] space-y-6 max-h-[90vh] overflow-y-auto">
@@ -779,21 +929,121 @@ export default function AdminPage() {
                 </button>
               </div>
 
-              {/* Candidate Info Grid */}
+              {/* Status Decision Panel */}
+              <div className="p-4 bg-[#17090D] border border-white/10 space-y-3 font-mono">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[11px] text-[#B8AEB1] uppercase tracking-wider font-bold">
+                    CANDIDATE STATUS:
+                  </span>
+                  <span
+                    className={`px-2.5 py-1 text-xs font-bold uppercase tracking-wider ${getStatusBadge(
+                      selectedApp.status || "Pending"
+                    )}`}
+                  >
+                    {selectedApp.status || "Pending"}
+                  </span>
+                </div>
+
+                <div className="text-[10px] text-[#B8AEB1]/70">
+                  Update candidate status or disposition for this application:
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                  {/* Select candidate */}
+                  <button
+                    onClick={() => handleUpdateAppStatus(selectedApp.id, "Selected")}
+                    disabled={updatingStatusId === selectedApp.id}
+                    className={`px-3 py-2 text-xs font-bold uppercase flex items-center justify-center gap-1.5 transition-colors cursor-pointer border ${
+                      selectedApp.status === "Selected"
+                        ? "bg-emerald-600 text-white border-emerald-400"
+                        : "bg-emerald-950/40 border-emerald-500/40 text-emerald-400 hover:bg-emerald-600 hover:text-white"
+                    }`}
+                  >
+                    <UserCheck className="w-3.5 h-3.5" />
+                    <span>SELECT</span>
+                  </button>
+
+                  {/* Reviewed */}
+                  <button
+                    onClick={() => handleUpdateAppStatus(selectedApp.id, "Reviewed")}
+                    disabled={updatingStatusId === selectedApp.id}
+                    className={`px-3 py-2 text-xs font-bold uppercase flex items-center justify-center gap-1.5 transition-colors cursor-pointer border ${
+                      selectedApp.status === "Reviewed"
+                        ? "bg-sky-600 text-white border-sky-400"
+                        : "bg-sky-950/40 border-sky-500/40 text-sky-400 hover:bg-sky-600 hover:text-white"
+                    }`}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>REVIEWED</span>
+                  </button>
+
+                  {/* Rejected */}
+                  <button
+                    onClick={() => handleUpdateAppStatus(selectedApp.id, "Rejected")}
+                    disabled={updatingStatusId === selectedApp.id}
+                    className={`px-3 py-2 text-xs font-bold uppercase flex items-center justify-center gap-1.5 transition-colors cursor-pointer border ${
+                      selectedApp.status === "Rejected"
+                        ? "bg-rose-600 text-white border-rose-400"
+                        : "bg-rose-950/40 border-rose-500/40 text-rose-400 hover:bg-rose-600 hover:text-white"
+                    }`}
+                  >
+                    <Ban className="w-3.5 h-3.5" />
+                    <span>REJECT</span>
+                  </button>
+
+                  {/* Reset Pending */}
+                  <button
+                    onClick={() => handleUpdateAppStatus(selectedApp.id, "Pending")}
+                    disabled={updatingStatusId === selectedApp.id}
+                    className={`px-3 py-2 text-xs font-bold uppercase flex items-center justify-center gap-1.5 transition-colors cursor-pointer border ${
+                      selectedApp.status === "Pending"
+                        ? "bg-amber-600 text-white border-amber-400"
+                        : "bg-amber-950/40 border-amber-500/40 text-amber-400 hover:bg-amber-600 hover:text-white"
+                    }`}
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>PENDING</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Candidate Contact & Info Grid */}
               <div className="space-y-4 font-mono text-xs">
+                {/* Email & Discord */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-[#17090D] border border-white/10">
+                  {/* Email */}
                   <div>
-                    <span className="text-[10px] text-[#B8AEB1] block uppercase">EXPERIENCE</span>
-                    <span className="text-base font-bold text-white">{selectedApp.years_of_experience} Years</span>
+                    <span className="text-[10px] text-[#B8AEB1] block uppercase">EMAIL ADDRESS</span>
+                    {selectedApp.email ? (
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <a
+                          href={`mailto:${selectedApp.email}`}
+                          className="text-white hover:text-[#FF0000] font-bold underline flex items-center gap-1.5 truncate"
+                        >
+                          <Mail className="w-3.5 h-3.5 text-[#FF0000] shrink-0" />
+                          <span className="truncate">{selectedApp.email}</span>
+                        </a>
+                        <button
+                          onClick={() => handleCopyEmail(selectedApp.email || "")}
+                          className="text-[#FF0000] hover:text-white transition-colors cursor-pointer shrink-0"
+                          title="Copy Email"
+                        >
+                          {copiedEmail ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-white/40 italic">No email on record</span>
+                    )}
                   </div>
 
+                  {/* Discord */}
                   <div>
                     <span className="text-[10px] text-[#B8AEB1] block uppercase">DISCORD USERNAME</span>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-white font-bold">{selectedApp.discord_username}</span>
                       <button
                         onClick={() => handleCopyDiscord(selectedApp.discord_username)}
-                        className="text-[#FF0000] hover:text-white transition-colors cursor-pointer"
+                        className="text-[#FF0000] hover:text-white transition-colors cursor-pointer shrink-0"
                         title="Copy Discord handle"
                       >
                         {copiedDiscord ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -802,8 +1052,13 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* External Links */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-[#17090D] border border-white/10">
+                {/* Experience & External Links */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-[#17090D] border border-white/10">
+                  <div>
+                    <span className="text-[10px] text-[#B8AEB1] block uppercase">EXPERIENCE</span>
+                    <span className="text-base font-bold text-white">{selectedApp.years_of_experience} Years</span>
+                  </div>
+
                   <div>
                     <span className="text-[10px] text-[#B8AEB1] block uppercase">PORTFOLIO / REEL</span>
                     {selectedApp.portfolio_link ? (
@@ -811,13 +1066,13 @@ export default function AdminPage() {
                         href={selectedApp.portfolio_link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[#FF0000] hover:underline flex items-center gap-1 truncate"
+                        className="text-[#FF0000] hover:underline flex items-center gap-1 truncate mt-1"
                       >
                         <span className="truncate">{selectedApp.portfolio_link}</span>
                         <ExternalLink className="w-3 h-3 shrink-0" />
                       </a>
                     ) : (
-                      <span className="text-[#B8AEB1]/50">Not Provided</span>
+                      <span className="text-[#B8AEB1]/50 mt-1 block">Not Provided</span>
                     )}
                   </div>
 
@@ -828,13 +1083,13 @@ export default function AdminPage() {
                         href={selectedApp.linkedin_profile}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[#FF0000] hover:underline flex items-center gap-1 truncate"
+                        className="text-[#FF0000] hover:underline flex items-center gap-1 truncate mt-1"
                       >
                         <span className="truncate">{selectedApp.linkedin_profile}</span>
                         <ExternalLink className="w-3 h-3 shrink-0" />
                       </a>
                     ) : (
-                      <span className="text-[#B8AEB1]/50">Not Provided</span>
+                      <span className="text-[#B8AEB1]/50 mt-1 block">Not Provided</span>
                     )}
                   </div>
                 </div>
@@ -874,6 +1129,26 @@ export default function AdminPage() {
                       <span>DOWNLOAD</span>
                     </a>
                   </div>
+                </div>
+
+                {/* Danger Zone: Delete application */}
+                <div className="p-4 bg-red-950/20 border border-red-500/30 flex items-center justify-between gap-4">
+                  <div>
+                    <div className="text-xs font-bold text-red-400 uppercase">
+                      DANGER ZONE: DELETE APPLICATION
+                    </div>
+                    <div className="text-[10px] text-[#B8AEB1]/70">
+                      Permanently purge this candidate record and attached CV from PostgreSQL database.
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteApplication(selectedApp.id)}
+                    disabled={deletingAppId === selectedApp.id}
+                    className="px-3.5 py-2 bg-red-900/60 hover:bg-[#FF0000] text-white font-bold text-[11px] uppercase flex items-center gap-1.5 transition-colors cursor-pointer border border-red-500/50 disabled:opacity-40"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{deletingAppId === selectedApp.id ? "DELETING..." : "DELETE"}</span>
+                  </button>
                 </div>
 
                 <div className="pt-4 border-t border-white/10 flex justify-between items-center text-[10px] text-[#B8AEB1]">

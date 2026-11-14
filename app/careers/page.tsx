@@ -34,6 +34,7 @@ export default function CareersPage() {
   // Application form states
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
   const [yearsExperience, setYearsExperience] = useState<number>(3);
   const [discordUsername, setDiscordUsername] = useState("");
   const [portfolioLink, setPortfolioLink] = useState("");
@@ -77,6 +78,7 @@ export default function CareersPage() {
     setSelectedJob(null);
     setFirstName("");
     setLastName("");
+    setEmail("");
     setYearsExperience(3);
     setDiscordUsername("");
     setPortfolioLink("");
@@ -106,6 +108,10 @@ export default function CareersPage() {
       setErrorMessage("First and Last name are required.");
       return;
     }
+    if (!email.trim() || !email.includes("@")) {
+      setErrorMessage("A valid email address is required.");
+      return;
+    }
     if (!discordUsername.trim()) {
       setErrorMessage("Discord username is mandatory.");
       return;
@@ -124,6 +130,7 @@ export default function CareersPage() {
       formData.append("job_title", selectedJob.title);
       formData.append("first_name", firstName.trim());
       formData.append("last_name", lastName.trim());
+      formData.append("email", email.trim().toLowerCase());
       formData.append("years_of_experience", yearsExperience.toString());
       formData.append("discord_username", discordUsername.trim());
       formData.append("portfolio_link", portfolioLink.trim());
@@ -322,6 +329,21 @@ export default function CareersPage() {
                         className="w-full bg-[#09090C] border border-white/15 px-3.5 py-2.5 text-xs text-white focus:border-[#FF0000] focus:outline-none"
                       />
                     </div>
+                  </div>
+
+                  {/* Email Address */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block">
+                      EMAIL ADDRESS <span className="text-[#FF0000]">* (MANDATORY)</span>
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="e.g. elena.vance@example.com"
+                      className="w-full bg-[#09090C] border border-white/15 px-3.5 py-2.5 text-xs text-white focus:border-[#FF0000] focus:outline-none"
+                    />
                   </div>
 
                   {/* Years of Experience Slider (0 to 20) */}

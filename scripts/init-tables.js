@@ -52,10 +52,16 @@ async function initTables() {
         cv_filename TEXT NOT NULL,
         cv_mimetype TEXT NOT NULL,
         cv_data TEXT NOT NULL,
+        email TEXT,
+        status TEXT DEFAULT 'Pending',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
+
+      ALTER TABLE job_applications ADD COLUMN IF NOT EXISTS email TEXT;
+      ALTER TABLE job_applications ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Pending';
+      ALTER TABLE jobs ADD COLUMN IF NOT EXISTS email TEXT;
     `);
-    console.log("Table 'job_applications' verified/created.");
+    console.log("Table 'job_applications' verified/created and schema updated.");
 
     // Tables ready
     console.log("Database schema initialized and verified.");
