@@ -38,14 +38,21 @@ import {
   Pencil,
 } from "lucide-react";
 
+export interface CustomField {
+  id: string;
+  label: string;
+  value: string;
+}
+
 interface Job {
   id: number;
   title: string;
-  department: string;
-  location: string;
-  type: string;
-  description: string;
   status: string;
+  custom_fields?: CustomField[];
+  department?: string;
+  location?: string;
+  type?: string;
+  description?: string;
   display_order?: number;
   application_count?: number;
   created_at: string;
@@ -90,10 +97,7 @@ export default function AdminPage() {
 
   // New Job Form State
   const [newTitle, setNewTitle] = useState("");
-  const [newDepartment, setNewDepartment] = useState("Engineering");
-  const [newLocation, setNewLocation] = useState("Remote");
-  const [newType, setNewType] = useState("Full-time");
-  const [newDescription, setNewDescription] = useState("");
+  const [newCustomFields, setNewCustomFields] = useState<CustomField[]>([]);
   const [creatingJob, setCreatingJob] = useState(false);
   const [jobSuccess, setJobSuccess] = useState(false);
   const [jobError, setJobError] = useState("");
@@ -112,14 +116,79 @@ export default function AdminPage() {
   // Edit Job State
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [editTitle, setEditTitle] = useState("");
-  const [editDepartment, setEditDepartment] = useState("Engineering");
-  const [editLocation, setEditLocation] = useState("Remote");
-  const [editType, setEditType] = useState("Full-time");
   const [editStatus, setEditStatus] = useState("Open");
-  const [editDescription, setEditDescription] = useState("");
+  const [editCustomFields, setEditCustomFields] = useState<CustomField[]>([]);
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState("");
   const [editSuccess, setEditSuccess] = useState(false);
+
+  // Dynamic Field Handlers for New Job
+  const addFieldToNewJob = (defaultLabel = "") => {
+    setNewCustomFields((prev) => [
+      ...prev,
+      {
+        id: "f_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
+        label: defaultLabel,
+        value: "",
+      },
+    ]);
+  };
+
+  const updateNewJobField = (id: string, fieldKey: "label" | "value", text: string) => {
+    setNewCustomFields((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, [fieldKey]: text } : f))
+    );
+  };
+
+  const removeNewJobField = (id: string) => {
+    setNewCustomFields((prev) => prev.filter((f) => f.id !== id));
+  };
+
+  const moveNewJobField = (index: number, direction: "up" | "down") => {
+    setNewCustomFields((prev) => {
+      const targetIndex = direction === "up" ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= prev.length) return prev;
+      const copy = [...prev];
+      const temp = copy[index];
+      copy[index] = copy[targetIndex];
+      copy[targetIndex] = temp;
+      return copy;
+    });
+  };
+
+  // Dynamic Field Handlers for Edit Job
+  const addFieldToEditJob = (defaultLabel = "") => {
+    setEditCustomFields((prev) => [
+      ...prev,
+      {
+        id: "f_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
+        label: defaultLabel,
+        value: "",
+      },
+    ]);
+  };
+
+  const updateEditJobField = (id: string, fieldKey: "label" | "value", text: string) => {
+    setEditCustomFields((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, [fieldKey]: text } : f))
+    );
+  };
+
+  const removeEditJobField = (id: string) => {
+    setEditCustomFields((prev) => prev.filter((f) => f.id !== id));
+  };
+
+  const moveEditJobField = (index: number, direction: "up" | "down") => {
+    setEditCustomFields((prev) => {
+      const targetIndex = direction === "up" ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= prev.length) return prev;
+      const copy = [...prev];
+      const temp = copy[index];
+      copy[index] = copy[targetIndex];
+      copy[targetIndex] = temp;
+      return copy;
+    });
+  };
 
   // Fetch jobs and applications using the verified admin key
   const fetchDataWithKey = async (key: string) => {
@@ -279,11 +348,8 @@ export default function AdminPage() {
         },
         body: JSON.stringify({
           title: newTitle.trim(),
-          department: newDepartment,
-          location: newLocation,
-          type: newType,
-          description: newDescription.trim(),
           status: "Open",
+          custom_fields: newCustomFields,
         }),
       });
 
@@ -291,7 +357,7 @@ export default function AdminPage() {
       if (data.success) {
         setJobSuccess(true);
         setNewTitle("");
-        setNewDescription("");
+        setNewCustomFields([]);
         fetchDataWithKey(adminKey);
         setTimeout(() => setJobSuccess(false), 3000);
       } else {
@@ -414,11 +480,12 @@ export default function AdminPage() {
   const openEditJobModal = (job: Job) => {
     setEditingJob(job);
     setEditTitle(job.title);
-    setEditDepartment(job.department || "Engineering");
-    setEditLocation(job.location || "Remote");
-    setEditType(job.type || "Full-time");
     setEditStatus(job.status || "Open");
-    setEditDescription(job.description || "");
+    setEditCustomFields(
+      job.custom_fields && Array.isArray(job.custom_fields)
+        ? job.custom_fields.map((f) => ({ ...f }))
+        : []
+    );
     setEditError("");
     setEditSuccess(false);
   };
@@ -426,6 +493,7 @@ export default function AdminPage() {
   // Close Edit Job Modal
   const closeEditJobModal = () => {
     setEditingJob(null);
+    setEditCustomFields([]);
     setEditError("");
     setEditSuccess(false);
   };
@@ -452,11 +520,8 @@ export default function AdminPage() {
         body: JSON.stringify({
           id: editingJob.id,
           title: editTitle.trim(),
-          department: editDepartment,
-          location: editLocation,
-          type: editType,
           status: editStatus,
-          description: editDescription.trim(),
+          custom_fields: editCustomFields,
         }),
       });
 
@@ -907,71 +972,143 @@ export default function AdminPage() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {/* Department */}
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block">
-                        DEPARTMENT
-                      </label>
-                      <select
-                        value={newDepartment}
-                        onChange={(e) => setNewDepartment(e.target.value)}
-                        className="w-full bg-[#09090C] border border-white/15 px-3 py-2.5 text-white focus:border-[#FF0000] focus:outline-none"
+                  {/* Dynamic Custom Fields Section */}
+                  <div className="space-y-3 pt-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-2.5">
+                      <div>
+                        <span className="text-[11px] text-white uppercase tracking-wider font-bold block">
+                          DYNAMIC FIELDS ({newCustomFields.length})
+                        </span>
+                        <p className="text-[10px] text-[#B8AEB1]">
+                          No static fields are enforced. Add any custom fields with their label and value.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => addFieldToNewJob("")}
+                        className="self-start sm:self-auto px-3 py-1.5 bg-[#FF0000]/10 border border-[#FF0000] text-[#FF0000] hover:bg-[#FF0000] hover:text-[#09090C] text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
                       >
-                        <option value="Engineering">Engineering</option>
-                        <option value="Art & VFX">Art & VFX</option>
-                        <option value="Audio & Sound">Audio & Sound</option>
-                        <option value="Design">Design</option>
-                        <option value="Production">Production</option>
-                      </select>
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>ADD FIELD</span>
+                      </button>
                     </div>
 
-                    {/* Location */}
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block">
-                        LOCATION
-                      </label>
-                      <select
-                        value={newLocation}
-                        onChange={(e) => setNewLocation(e.target.value)}
-                        className="w-full bg-[#09090C] border border-white/15 px-3 py-2.5 text-white focus:border-[#FF0000] focus:outline-none"
-                      >
-                        <option value="Remote">Remote</option>
-                        <option value="Montréal / Hybrid">Montréal / Hybrid</option>
-                        <option value="Tokyo / Hybrid">Tokyo / Hybrid</option>
-                        <option value="Berlin / Hybrid">Berlin / Hybrid</option>
-                      </select>
+                    {/* Quick Suggestion Presets */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] text-[#B8AEB1]/60 uppercase tracking-widest font-bold mr-1">
+                        QUICK PRESETS:
+                      </span>
+                      {[
+                        "Department",
+                        "Location",
+                        "Employment Type",
+                        "Experience Required",
+                        "Role Overview",
+                        "Tech Stack",
+                        "Compensation",
+                      ].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => addFieldToNewJob(preset)}
+                          className="px-2 py-0.5 bg-[#09090C] border border-white/15 hover:border-[#FF0000] text-[10px] text-[#B8AEB1] hover:text-white transition-colors cursor-pointer"
+                        >
+                          + {preset}
+                        </button>
+                      ))}
                     </div>
 
-                    {/* Type */}
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block">
-                        EMPLOYMENT TYPE
-                      </label>
-                      <select
-                        value={newType}
-                        onChange={(e) => setNewType(e.target.value)}
-                        className="w-full bg-[#09090C] border border-white/15 px-3 py-2.5 text-white focus:border-[#FF0000] focus:outline-none"
-                      >
-                        <option value="Full-time">Full-time</option>
-                        <option value="Contract">Contract</option>
-                        <option value="Part-time">Part-time</option>
-                      </select>
-                    </div>
-                  </div>
+                    {/* Empty State */}
+                    {newCustomFields.length === 0 ? (
+                      <div className="p-6 text-center border border-dashed border-white/15 bg-[#09090C]/50 space-y-2">
+                        <div className="text-[11px] text-[#B8AEB1] font-bold">
+                          NO CUSTOM FIELDS ADDED YET
+                        </div>
+                        <p className="text-[10px] text-[#B8AEB1]/60 max-w-sm mx-auto">
+                          This role starts completely empty. Use the quick presets above or click &quot;ADD FIELD&quot; to define custom labels and descriptions.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {newCustomFields.map((field, idx) => (
+                          <div
+                            key={field.id}
+                            className="p-3.5 bg-[#09090C] border border-white/10 hover:border-white/20 space-y-2.5 transition-colors"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold text-[#FF0000] tracking-wider uppercase">
+                                FIELD #{idx + 1}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => moveNewJobField(idx, "up")}
+                                  disabled={idx === 0}
+                                  className="p-1 text-[#B8AEB1] hover:text-white disabled:opacity-20 cursor-pointer"
+                                  title="Move up"
+                                >
+                                  <ArrowUp className="w-3 h-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => moveNewJobField(idx, "down")}
+                                  disabled={idx === newCustomFields.length - 1}
+                                  className="p-1 text-[#B8AEB1] hover:text-white disabled:opacity-20 cursor-pointer"
+                                  title="Move down"
+                                >
+                                  <ArrowDown className="w-3 h-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeNewJobField(field.id)}
+                                  className="p-1 text-[#B8AEB1] hover:text-[#FF0000] cursor-pointer ml-1"
+                                  title="Remove field"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
 
-                  {/* Role Description */}
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
-                      ROLE RESPONSIBILITIES & REQUIREMENTS
-                    </label>
-                    <textarea
-                      rows={4}
-                      value={newDescription}
-                      onChange={(e) => setNewDescription(e.target.value)}
-                      placeholder="Outline key objectives, tech stack, and background requirements..."
-                      className="w-full bg-[#09090C] border border-white/15 px-3 py-2.5 text-white focus:border-[#FF0000] focus:outline-none placeholder:text-[#B8AEB1]/30 leading-relaxed"
-                    />
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                              <div className="space-y-1">
+                                <label className="text-[10px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
+                                  FIELD LABEL / NAME
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. Department, Location, Tech Stack"
+                                  value={field.label}
+                                  onChange={(e) =>
+                                    updateNewJobField(field.id, "label", e.target.value)
+                                  }
+                                  required
+                                  className="w-full bg-[#151115] border border-white/15 px-3 py-2 text-white focus:border-[#FF0000] focus:outline-none"
+                                />
+                              </div>
+
+                              <div className="sm:col-span-2 space-y-1">
+                                <label className="text-[10px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
+                                  FIELD VALUE / DESCRIPTION
+                                </label>
+                                <textarea
+                                  rows={
+                                    field.value.includes("\n") || field.value.length > 50
+                                      ? 3
+                                      : 1
+                                  }
+                                  placeholder="Enter value or description..."
+                                  value={field.value}
+                                  onChange={(e) =>
+                                    updateNewJobField(field.id, "value", e.target.value)
+                                  }
+                                  className="w-full bg-[#151115] border border-white/15 px-3 py-2 text-white focus:border-[#FF0000] focus:outline-none leading-relaxed"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <button
@@ -1016,9 +1153,7 @@ export default function AdminPage() {
                         <tr>
                           <th className="py-3 px-4 text-center w-24">Order</th>
                           <th className="py-3 px-4">Role Title</th>
-                          <th className="py-3 px-4">Department</th>
-                          <th className="py-3 px-4">Location</th>
-                          <th className="py-3 px-4">Type</th>
+                          <th className="py-3 px-4">Dynamic Custom Fields</th>
                           <th className="py-3 px-4">Status</th>
                           <th className="py-3 px-4">Applications</th>
                           <th className="py-3 px-4 text-right">Actions</th>
@@ -1052,10 +1187,31 @@ export default function AdminPage() {
                                 </div>
                               </div>
                             </td>
-                            <td className="py-3 px-4 font-bold text-white">{job.title}</td>
-                            <td className="py-3 px-4 text-[#B8AEB1]">{job.department}</td>
-                            <td className="py-3 px-4 text-[#B8AEB1]">{job.location}</td>
-                            <td className="py-3 px-4 text-[#B8AEB1]">{job.type}</td>
+                            <td className="py-3 px-4 font-bold text-white whitespace-nowrap">
+                              {job.title}
+                            </td>
+                            <td className="py-3 px-4">
+                              {job.custom_fields && job.custom_fields.length > 0 ? (
+                                <div className="flex flex-wrap gap-1.5 max-w-md">
+                                  {job.custom_fields.map((field) => (
+                                    <span
+                                      key={field.id}
+                                      className="px-2 py-0.5 bg-[#09090C] border border-white/10 text-[10px] text-white flex items-center gap-1"
+                                      title={field.value}
+                                    >
+                                      <span className="text-[#FF0000] font-bold">{field.label}:</span>
+                                      <span className="text-[#B8AEB1] truncate max-w-[120px]">
+                                        {field.value}
+                                      </span>
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-[10px] text-[#B8AEB1]/40 italic">
+                                  No custom fields
+                                </span>
+                              )}
+                            </td>
                             <td className="py-3 px-4">
                               <button
                                 onClick={() => handleToggleStatus(job)}
@@ -1429,57 +1585,7 @@ export default function AdminPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {/* Department */}
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
-                      DEPARTMENT
-                    </label>
-                    <select
-                      value={editDepartment}
-                      onChange={(e) => setEditDepartment(e.target.value)}
-                      className="w-full bg-[#09090C] border border-white/15 px-3 py-2.5 text-white focus:border-[#FF0000] focus:outline-none"
-                    >
-                      <option value="Engineering">Engineering</option>
-                      <option value="Art & VFX">Art & VFX</option>
-                      <option value="Audio & Sound">Audio & Sound</option>
-                      <option value="Design">Design</option>
-                      <option value="Production">Production</option>
-                    </select>
-                  </div>
-
-                  {/* Location */}
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
-                      LOCATION
-                    </label>
-                    <input
-                      type="text"
-                      value={editLocation}
-                      onChange={(e) => setEditLocation(e.target.value)}
-                      placeholder="e.g. Remote / Montréal"
-                      className="w-full bg-[#09090C] border border-white/15 px-3 py-2.5 text-white focus:border-[#FF0000] focus:outline-none"
-                    />
-                  </div>
-
-                  {/* Type */}
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
-                      TYPE
-                    </label>
-                    <select
-                      value={editType}
-                      onChange={(e) => setEditType(e.target.value)}
-                      className="w-full bg-[#09090C] border border-white/15 px-3 py-2.5 text-white focus:border-[#FF0000] focus:outline-none"
-                    >
-                      <option value="Full-time">Full-time</option>
-                      <option value="Contract">Contract</option>
-                      <option value="Part-time">Part-time</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Status Toggle */}
+                {/* Posting Status */}
                 <div className="space-y-1.5">
                   <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
                     POSTING STATUS
@@ -1494,17 +1600,141 @@ export default function AdminPage() {
                   </select>
                 </div>
 
-                {/* Description */}
-                <div className="space-y-1.5">
-                  <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
-                    ROLE RESPONSIBILITIES & REQUIREMENTS
-                  </label>
-                  <textarea
-                    rows={5}
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    className="w-full bg-[#09090C] border border-white/15 px-3 py-2.5 text-white focus:border-[#FF0000] focus:outline-none placeholder:text-[#B8AEB1]/30 leading-relaxed"
-                  />
+                {/* Dynamic Custom Fields Section for Edit */}
+                <div className="space-y-3 pt-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-2.5">
+                    <div>
+                      <span className="text-[11px] text-white uppercase tracking-wider font-bold block">
+                        DYNAMIC FIELDS ({editCustomFields.length})
+                      </span>
+                      <p className="text-[10px] text-[#B8AEB1]">
+                        Add, remove, or customize any field labels and descriptions for this role.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => addFieldToEditJob("")}
+                      className="self-start sm:self-auto px-3 py-1.5 bg-[#FF0000]/10 border border-[#FF0000] text-[#FF0000] hover:bg-[#FF0000] hover:text-[#09090C] text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>ADD FIELD</span>
+                    </button>
+                  </div>
+
+                  {/* Quick Suggestion Presets */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] text-[#B8AEB1]/60 uppercase tracking-widest font-bold mr-1">
+                      QUICK PRESETS:
+                    </span>
+                    {[
+                      "Department",
+                      "Location",
+                      "Employment Type",
+                      "Experience Required",
+                      "Role Overview",
+                      "Tech Stack",
+                      "Compensation",
+                    ].map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => addFieldToEditJob(preset)}
+                        className="px-2 py-0.5 bg-[#09090C] border border-white/15 hover:border-[#FF0000] text-[10px] text-[#B8AEB1] hover:text-white transition-colors cursor-pointer"
+                      >
+                        + {preset}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Empty State */}
+                  {editCustomFields.length === 0 ? (
+                    <div className="p-6 text-center border border-dashed border-white/15 bg-[#09090C]/50 space-y-2">
+                      <div className="text-[11px] text-[#B8AEB1] font-bold">
+                        NO CUSTOM FIELDS CONFIGURED
+                      </div>
+                      <p className="text-[10px] text-[#B8AEB1]/60 max-w-sm mx-auto">
+                        This role currently has no custom fields. Use the presets above or click &quot;ADD FIELD&quot; to define custom labels and descriptions.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {editCustomFields.map((field, idx) => (
+                        <div
+                          key={field.id}
+                          className="p-3.5 bg-[#09090C] border border-white/10 hover:border-white/20 space-y-2.5 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-[#FF0000] tracking-wider uppercase">
+                              FIELD #{idx + 1}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => moveEditJobField(idx, "up")}
+                                disabled={idx === 0}
+                                className="p-1 text-[#B8AEB1] hover:text-white disabled:opacity-20 cursor-pointer"
+                                title="Move up"
+                              >
+                                <ArrowUp className="w-3 h-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => moveEditJobField(idx, "down")}
+                                disabled={idx === editCustomFields.length - 1}
+                                className="p-1 text-[#B8AEB1] hover:text-white disabled:opacity-20 cursor-pointer"
+                                title="Move down"
+                              >
+                                <ArrowDown className="w-3 h-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeEditJobField(field.id)}
+                                className="p-1 text-[#B8AEB1] hover:text-[#FF0000] cursor-pointer ml-1"
+                                title="Remove field"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="space-y-1">
+                              <label className="text-[10px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
+                                FIELD LABEL / NAME
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="e.g. Department, Location, Tech Stack"
+                                value={field.label}
+                                onChange={(e) =>
+                                  updateEditJobField(field.id, "label", e.target.value)
+                                }
+                                required
+                                className="w-full bg-[#151115] border border-white/15 px-3 py-2 text-white focus:border-[#FF0000] focus:outline-none"
+                              />
+                            </div>
+
+                            <div className="sm:col-span-2 space-y-1">
+                              <label className="text-[10px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
+                                FIELD VALUE / DESCRIPTION
+                              </label>
+                              <textarea
+                                rows={
+                                  field.value.includes("\n") || field.value.length > 50 ? 3 : 1
+                                }
+                                placeholder="Enter value or description..."
+                                value={field.value}
+                                onChange={(e) =>
+                                  updateEditJobField(field.id, "value", e.target.value)
+                                }
+                                className="w-full bg-[#151115] border border-white/15 px-3 py-2 text-white focus:border-[#FF0000] focus:outline-none leading-relaxed"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Actions */}

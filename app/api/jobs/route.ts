@@ -11,7 +11,7 @@ export async function GET() {
       FROM jobs j
       LEFT JOIN job_applications a ON j.id = a.job_id
       GROUP BY j.id
-      ORDER BY j.created_at DESC;
+      ORDER BY j.display_order ASC, j.created_at DESC;
     `);
     return NextResponse.json({ success: true, jobs: result.rows });
   } catch (error: unknown) {
@@ -24,7 +24,7 @@ export async function GET() {
   }
 }
 
-// POST /api/jobs - Create a new job
+// POST /api/jobs - Create a new job with dynamic custom fields
 export async function POST(request: Request) {
   try {
     const adminPassword = request.headers.get("x-admin-password");
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { title, description, department, location, type, status } = body;
+    const { title, status, custom_fields } = body;
 
     if (!title || !title.trim()) {
       return NextResponse.json(
@@ -45,22 +45,47 @@ export async function POST(request: Request) {
       );
     }
 
+    // Clean and normalize dynamic custom fields
+    const sanitizedFields = Array.isArray(custom_fields)
+      ? custom_fields
+          .filter((f) => f && typeof f.label === "string" && f.label.trim())
+          .map((f, idx) => ({
+            id: f.id || `f_${Date.now()}_${idx}`,
+            label: f.label.trim(),
+            value: typeof f.value === "string" ? f.value.trim() : "",
+          }))
+      : [];
+
+    // Helper extractors for legacy fallback columns
+    const findField = (matcher: string) => {
+      const match = sanitizedFields.find((f) =>
+        f.label.toLowerCase().includes(matcher.toLowerCase())
+      );
+      return match ? match.value : "";
+    };
+
+    const dept = findField("department") || "General";
+    const loc = findField("location") || "";
+    const type = findField("type") || "";
+    const desc = findField("description") || findField("requirement") || findField("responsibilit") || "";
+
     const result = await query(
       `
-      INSERT INTO jobs (title, description, department, location, type, status, display_order)
+      INSERT INTO jobs (title, status, custom_fields, department, location, type, description, display_order)
       VALUES (
-        $1, $2, $3, $4, $5, $6,
+        $1, $2, $3::jsonb, $4, $5, $6, $7,
         (SELECT COALESCE(MAX(display_order), 0) + 1 FROM jobs)
       )
       RETURNING *;
       `,
       [
         title.trim(),
-        description ? description.trim() : "",
-        department ? department.trim() : "Engineering",
-        location ? location.trim() : "Remote",
-        type ? type.trim() : "Full-time",
         status ? status.trim() : "Open",
+        JSON.stringify(sanitizedFields),
+        dept,
+        loc,
+        type,
+        desc,
       ]
     );
 
@@ -75,7 +100,7 @@ export async function POST(request: Request) {
   }
 }
 
-// PUT /api/jobs - Edit an existing job
+// PUT /api/jobs - Edit an existing job with dynamic custom fields
 export async function PUT(request: Request) {
   try {
     const adminPassword = request.headers.get("x-admin-password");
@@ -87,7 +112,7 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { id, title, description, department, location, type, status } = body;
+    const { id, title, status, custom_fields } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -103,26 +128,51 @@ export async function PUT(request: Request) {
       );
     }
 
+    // Clean and normalize dynamic custom fields
+    const sanitizedFields = Array.isArray(custom_fields)
+      ? custom_fields
+          .filter((f) => f && typeof f.label === "string" && f.label.trim())
+          .map((f, idx) => ({
+            id: f.id || `f_${Date.now()}_${idx}`,
+            label: f.label.trim(),
+            value: typeof f.value === "string" ? f.value.trim() : "",
+          }))
+      : [];
+
+    const findField = (matcher: string) => {
+      const match = sanitizedFields.find((f) =>
+        f.label.toLowerCase().includes(matcher.toLowerCase())
+      );
+      return match ? match.value : "";
+    };
+
+    const dept = findField("department") || "General";
+    const loc = findField("location") || "";
+    const type = findField("type") || "";
+    const desc = findField("description") || findField("requirement") || findField("responsibilit") || "";
+
     const result = await query(
       `
       UPDATE jobs
       SET 
         title = $1,
-        description = $2,
-        department = $3,
-        location = $4,
-        type = $5,
-        status = $6
-      WHERE id = $7
+        status = $2,
+        custom_fields = $3::jsonb,
+        department = $4,
+        location = $5,
+        type = $6,
+        description = $7
+      WHERE id = $8
       RETURNING *;
       `,
       [
         title.trim(),
-        description ? description.trim() : "",
-        department ? department.trim() : "Engineering",
-        location ? location.trim() : "Remote",
-        type ? type.trim() : "Full-time",
         status ? status.trim() : "Open",
+        JSON.stringify(sanitizedFields),
+        dept,
+        loc,
+        type,
+        desc,
         parseInt(id, 10),
       ]
     );

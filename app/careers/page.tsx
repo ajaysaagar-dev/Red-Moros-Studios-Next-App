@@ -5,8 +5,6 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SmoothScroll from "@/components/SmoothScroll";
 import {
-  MapPin,
-  Clock,
   Send,
   Upload,
   CheckCircle2,
@@ -16,14 +14,21 @@ import {
   ArrowRight,
 } from "lucide-react";
 
+interface CustomField {
+  id: string;
+  label: string;
+  value: string;
+}
+
 interface Job {
   id: number;
   title: string;
-  department: string;
-  location: string;
-  type: string;
-  description: string;
   status: string;
+  custom_fields?: CustomField[];
+  department?: string;
+  location?: string;
+  type?: string;
+  description?: string;
   display_order?: number;
 }
 
@@ -204,37 +209,59 @@ export default function CareersPage() {
                 {jobs.map((job) => (
                   <div
                     key={job.id}
-                    className="p-6 sm:p-8 bg-[#151115] border border-white/10 hover:border-[#FF0000]/70 transition-all duration-300 flex flex-col md:flex-row md:items-center justify-between gap-6 group"
+                    className="p-6 sm:p-8 bg-[#151115] border border-white/10 hover:border-[#FF0000]/70 transition-all duration-300 flex flex-col md:flex-row md:items-start justify-between gap-6 group"
                   >
-                    <div className="space-y-3 max-w-2xl text-left">
-                      <div className="flex flex-wrap items-center gap-3 font-mono text-xs">
-                        <span className="px-2.5 py-0.5 bg-[#17090D] border border-[#FF0000]/40 text-[#FF0000] font-bold uppercase tracking-wider">
-                          {job.department || "General"}
-                        </span>
-                        <span className="text-[#B8AEB1] flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-[#FF0000]" />
-                          <span>{job.location || "Remote"}</span>
-                        </span>
-                        <span className="text-[#B8AEB1] flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-[#FF0000]" />
-                          <span>{job.type || "Full-time"}</span>
-                        </span>
-                      </div>
+                    <div className="space-y-4 max-w-2xl text-left flex-1">
+                      {/* Short Dynamic Fields (Badges / Tags) - Only rendered if admin configured them */}
+                      {job.custom_fields &&
+                        job.custom_fields.filter(
+                          (f) => f.value && f.value.length <= 50 && !f.value.includes("\n")
+                        ).length > 0 && (
+                          <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+                            {job.custom_fields
+                              .filter(
+                                (f) => f.value && f.value.length <= 50 && !f.value.includes("\n")
+                              )
+                              .map((field) => (
+                                <span
+                                  key={field.id}
+                                  className="px-2.5 py-1 bg-[#17090D] border border-[#FF0000]/30 text-white flex items-center gap-1.5"
+                                >
+                                  <span className="text-[#FF0000] font-bold uppercase tracking-wider text-[10px]">
+                                    {field.label}:
+                                  </span>
+                                  <span className="text-[#F7F2F3]">{field.value}</span>
+                                </span>
+                              ))}
+                          </div>
+                        )}
 
+                      {/* Role Title */}
                       <h2 className="text-xl sm:text-2xl font-mono font-bold text-white uppercase tracking-wide group-hover:text-[#FF0000] transition-colors">
                         {job.title}
                       </h2>
 
-                      {job.description && (
-                        <p className="font-mono text-xs sm:text-sm text-[#B8AEB1] leading-relaxed font-light line-clamp-2">
-                          {job.description}
-                        </p>
-                      )}
+                      {/* Long Dynamic Fields (Descriptions / Responsibilities / Requirements) */}
+                      {job.custom_fields &&
+                        job.custom_fields
+                          .filter(
+                            (f) => f.value && (f.value.length > 50 || f.value.includes("\n"))
+                          )
+                          .map((field) => (
+                            <div key={field.id} className="space-y-1 pt-1 font-mono">
+                              <span className="text-[10px] text-[#FF0000] uppercase tracking-widest font-bold block">
+                                {"// "} {field.label}
+                              </span>
+                              <p className="text-xs sm:text-sm text-[#B8AEB1] leading-relaxed font-light whitespace-pre-line">
+                                {field.value}
+                              </p>
+                            </div>
+                          ))}
                     </div>
 
                     <button
                       onClick={() => openApplyModal(job)}
-                      className="px-6 py-3.5 bg-[#17090D] border border-[#FF0000] text-white hover:bg-[#FF0000] hover:text-[#09090C] font-mono text-xs uppercase tracking-widest font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0"
+                      className="px-6 py-3.5 bg-[#17090D] border border-[#FF0000] text-white hover:bg-[#FF0000] hover:text-[#09090C] font-mono text-xs uppercase tracking-widest font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0 self-start md:self-center"
                     >
                       <span>APPLY FOR ROLE</span>
                       <ArrowRight className="w-4 h-4" />
@@ -289,9 +316,21 @@ export default function CareersPage() {
                     <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-tight mt-0.5">
                       {selectedJob.title}
                     </h2>
-                    <div className="text-xs text-[#B8AEB1]">
-                      {selectedJob.department} • {selectedJob.location}
-                    </div>
+                    {selectedJob.custom_fields && selectedJob.custom_fields.length > 0 && (
+                      <div className="flex flex-wrap gap-2 pt-1.5">
+                        {selectedJob.custom_fields
+                          .filter((f) => f.value && f.value.length <= 40)
+                          .map((f) => (
+                            <span
+                              key={f.id}
+                              className="text-[10px] text-[#B8AEB1] bg-white/5 border border-white/10 px-2 py-0.5"
+                            >
+                              <span className="text-[#FF0000] font-semibold">{f.label}:</span>{" "}
+                              {f.value}
+                            </span>
+                          ))}
+                      </div>
+                    )}
                   </div>
 
                   {errorMessage && (

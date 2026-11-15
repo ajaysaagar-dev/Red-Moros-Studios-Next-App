@@ -55,7 +55,20 @@ async function takeScreenshots() {
   await page.screenshot({ path: path.join(OUTPUT_DIR, "admin-dashboard-mobile-viewport.png"), fullPage: false });
   await page.screenshot({ path: path.join(OUTPUT_DIR, "admin-dashboard-mobile-full.png"), fullPage: true });
 
-  // 4b. Switch to Roles Catalog tab and capture
+  // 4b. Switch to Post New Job tab and capture
+  console.log("Switching to Post New Job tab...");
+  const tabButtons = await page.$$("button");
+  for (const btn of tabButtons) {
+    const text = await page.evaluate((el) => el.textContent, btn);
+    if (text && text.includes("POST NEW JOB")) {
+      await btn.click();
+      break;
+    }
+  }
+  await new Promise((r) => setTimeout(r, 1000));
+  await page.screenshot({ path: path.join(OUTPUT_DIR, "admin-create-job-mobile.png"), fullPage: true });
+
+  // 4c. Switch to Roles Catalog tab and capture
   console.log("Switching to Roles Catalog tab...");
   const roleTabButtons = await page.$$("button");
   for (const btn of roleTabButtons) {
@@ -68,7 +81,7 @@ async function takeScreenshots() {
   await new Promise((r) => setTimeout(r, 1000));
   await page.screenshot({ path: path.join(OUTPUT_DIR, "admin-roles-mobile-full.png"), fullPage: true });
 
-  // 4c. Click first edit button to open Edit Job Modal
+  // 4d. Click first edit button to open Edit Job Modal
   console.log("Opening Edit Job Modal...");
   const editButtons = await page.$$('button[title="Edit role details"]');
   if (editButtons.length > 0) {

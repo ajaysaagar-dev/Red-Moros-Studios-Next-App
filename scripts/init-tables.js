@@ -36,6 +36,7 @@ async function initTables() {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
       ALTER TABLE jobs ADD COLUMN IF NOT EXISTS display_order INT DEFAULT 0;
+      ALTER TABLE jobs ADD COLUMN IF NOT EXISTS custom_fields JSONB DEFAULT '[]'::jsonb;
       UPDATE jobs SET display_order = id WHERE display_order IS NULL OR display_order = 0;
     `);
     console.log("Table 'jobs' verified/created.");
