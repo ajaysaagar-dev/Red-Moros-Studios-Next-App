@@ -125,6 +125,7 @@ export default function AdminPage() {
 
   // New Job Form State
   const [newTitle, setNewTitle] = useState("");
+  const [newDescription, setNewDescription] = useState("");
   const [newCustomFields, setNewCustomFields] = useState<CustomField[]>([]);
   const [creatingJob, setCreatingJob] = useState(false);
   const [jobSuccess, setJobSuccess] = useState(false);
@@ -144,6 +145,7 @@ export default function AdminPage() {
   // Edit Job State
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
   const [editStatus, setEditStatus] = useState("Open");
   const [editCustomFields, setEditCustomFields] = useState<CustomField[]>([]);
   const [savingEdit, setSavingEdit] = useState(false);
@@ -412,6 +414,7 @@ export default function AdminPage() {
         },
         body: JSON.stringify({
           title: newTitle.trim(),
+          description: newDescription.trim(),
           status: "Open",
           custom_fields: newCustomFields,
         }),
@@ -421,6 +424,7 @@ export default function AdminPage() {
       if (data.success) {
         setJobSuccess(true);
         setNewTitle("");
+        setNewDescription("");
         setNewCustomFields([]);
         fetchDataWithKey(adminKey);
         setTimeout(() => setJobSuccess(false), 3000);
@@ -544,6 +548,7 @@ export default function AdminPage() {
   const openEditJobModal = (job: Job) => {
     setEditingJob(job);
     setEditTitle(job.title);
+    setEditDescription(job.description || "");
     setEditStatus(job.status || "Open");
     setEditCustomFields(
       job.custom_fields && Array.isArray(job.custom_fields)
@@ -557,6 +562,8 @@ export default function AdminPage() {
   // Close Edit Job Modal
   const closeEditJobModal = () => {
     setEditingJob(null);
+    setEditTitle("");
+    setEditDescription("");
     setEditCustomFields([]);
     setEditError("");
     setEditSuccess(false);
@@ -584,6 +591,7 @@ export default function AdminPage() {
         body: JSON.stringify({
           id: editingJob.id,
           title: editTitle.trim(),
+          description: editDescription.trim(),
           status: editStatus,
           custom_fields: editCustomFields,
         }),
@@ -636,11 +644,11 @@ export default function AdminPage() {
     const q = searchQuery.toLowerCase();
     const matchesSearch =
       !searchQuery ||
-      app.first_name.toLowerCase().includes(q) ||
-      app.last_name.toLowerCase().includes(q) ||
-      (app.email && app.email.toLowerCase().includes(q)) ||
-      app.discord_username.toLowerCase().includes(q) ||
-      app.job_title.toLowerCase().includes(q);
+      (app.first_name || "").toLowerCase().includes(q) ||
+      (app.last_name || "").toLowerCase().includes(q) ||
+      (app.email ? app.email.toLowerCase().includes(q) : false) ||
+      (app.discord_username || "").toLowerCase().includes(q) ||
+      (app.job_title || "").toLowerCase().includes(q);
     return matchesRole && matchesStatus && matchesSearch;
   });
 
@@ -1036,6 +1044,20 @@ export default function AdminPage() {
                     />
                   </div>
 
+                  {/* Role Description / Overview */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
+                      ROLE DESCRIPTION / OVERVIEW
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="Enter a description for this role (displayed directly under the role title on the careers page)..."
+                      value={newDescription}
+                      onChange={(e) => setNewDescription(e.target.value)}
+                      className="w-full bg-[#09090C] border border-white/15 px-3 py-2.5 text-white focus:border-[#FF0000] focus:outline-none placeholder:text-[#B8AEB1]/30 resize-y"
+                    />
+                  </div>
+
                   {/* Dynamic Custom Fields Section */}
                   <div className="space-y-3 pt-2">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-2.5">
@@ -1295,8 +1317,13 @@ export default function AdminPage() {
                                 </div>
                               </div>
                             </td>
-                            <td className="py-3 px-4 font-bold text-white whitespace-nowrap">
-                              {job.title}
+                            <td className="py-3 px-4 font-bold text-white">
+                              <div>{job.title}</div>
+                              {job.description && (
+                                <div className="text-[11px] text-[#B8AEB1] font-normal line-clamp-1 max-w-xs mt-0.5">
+                                  {job.description}
+                                </div>
+                              )}
                             </td>
                             <td className="py-3 px-4">
                               {job.custom_fields && job.custom_fields.length > 0 ? (
@@ -1503,16 +1530,20 @@ export default function AdminPage() {
                   {/* Discord */}
                   <div>
                     <span className="text-[10px] text-[#B8AEB1] block uppercase">DISCORD USERNAME</span>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-white font-bold">{selectedApp.discord_username}</span>
-                      <button
-                        onClick={() => handleCopyDiscord(selectedApp.discord_username)}
-                        className="text-[#FF0000] hover:text-white transition-colors cursor-pointer shrink-0"
-                        title="Copy Discord handle"
-                      >
-                        {copiedDiscord ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-                      </button>
-                    </div>
+                    {selectedApp.discord_username ? (
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-white font-bold">{selectedApp.discord_username}</span>
+                        <button
+                          onClick={() => handleCopyDiscord(selectedApp.discord_username || "")}
+                          className="text-[#FF0000] hover:text-white transition-colors cursor-pointer shrink-0"
+                          title="Copy Discord handle"
+                        >
+                          {copiedDiscord ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-white/40 italic">Not provided</span>
+                    )}
                   </div>
                 </div>
 
@@ -1810,6 +1841,20 @@ export default function AdminPage() {
                     onChange={(e) => setEditTitle(e.target.value)}
                     required
                     className="w-full bg-[#09090C] border border-white/15 px-3 py-2.5 text-white focus:border-[#FF0000] focus:outline-none placeholder:text-[#B8AEB1]/30"
+                  />
+                </div>
+
+                {/* Role Description / Overview */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
+                    ROLE DESCRIPTION / OVERVIEW
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Enter a description for this role (displayed directly under the role title on the careers page)..."
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    className="w-full bg-[#09090C] border border-white/15 px-3 py-2.5 text-white focus:border-[#FF0000] focus:outline-none placeholder:text-[#B8AEB1]/30 resize-y"
                   />
                 </div>
 

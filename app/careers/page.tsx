@@ -280,6 +280,13 @@ export default function CareersPage() {
                         {job.title}
                       </h2>
 
+                      {/* Role Description */}
+                      {job.description && (
+                        <p className="font-mono text-xs sm:text-sm text-[#B8AEB1] leading-relaxed font-light whitespace-pre-line">
+                          {job.description}
+                        </p>
+                      )}
+
                       {/* Long Dynamic Fields (Descriptions / Responsibilities / Requirements) */}
                       {job.custom_fields &&
                         job.custom_fields
@@ -355,7 +362,12 @@ export default function CareersPage() {
                     <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-tight mt-0.5">
                       {selectedJob.title}
                     </h2>
-                    <p className="text-xs text-[#B8AEB1] mt-1">
+                    {selectedJob.description && (
+                      <p className="text-xs text-[#B8AEB1] mt-1 whitespace-pre-line font-light">
+                        {selectedJob.description}
+                      </p>
+                    )}
+                    <p className="text-[11px] text-[#B8AEB1]/70 mt-1">
                       Please complete the fields requested by Red Moros Studios for this role.
                     </p>
                   </div>

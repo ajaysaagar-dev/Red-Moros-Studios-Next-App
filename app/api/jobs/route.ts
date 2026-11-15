@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { title, status, custom_fields } = body;
+    const { title, status, custom_fields, description } = body;
 
     if (!title || !title.trim()) {
       return NextResponse.json(
@@ -70,7 +70,10 @@ export async function POST(request: Request) {
     const dept = findField("department") || "General";
     const loc = findField("location") || "";
     const type = findField("type") || "";
-    const desc = findField("description") || findField("requirement") || findField("responsibilit") || "";
+    const desc =
+      typeof description === "string"
+        ? description.trim()
+        : findField("description") || findField("requirement") || findField("responsibilit") || "";
 
     const result = await query(
       `
@@ -115,7 +118,7 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { id, title, status, custom_fields } = body;
+    const { id, title, status, custom_fields, description } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -155,7 +158,10 @@ export async function PUT(request: Request) {
     const dept = findField("department") || "General";
     const loc = findField("location") || "";
     const type = findField("type") || "";
-    const desc = findField("description") || findField("requirement") || findField("responsibilit") || "";
+    const desc =
+      typeof description === "string"
+        ? description.trim()
+        : findField("description") || findField("requirement") || findField("responsibilit") || "";
 
     const result = await query(
       `
