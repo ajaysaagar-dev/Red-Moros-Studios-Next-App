@@ -1393,8 +1393,8 @@ export default function AdminPage() {
 
         {/* CANDIDATE DOSSIER MODAL WITH CV PREVIEW & STATUS MANAGEMENT */}
         {selectedApp && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-            <div className="relative w-full max-w-2xl bg-[#130E14] border border-[#FF0000]/60 p-6 sm:p-8 text-left shadow-[0_0_50px_rgba(255,0,0,0.25)] space-y-6 max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-hidden">
+            <div className="relative w-full max-w-2xl bg-[#130E14] border border-[#FF0000]/60 p-6 sm:p-8 text-left shadow-[0_0_50px_rgba(255,0,0,0.25)] space-y-6 max-h-[90vh] overflow-y-auto overflow-x-hidden custom-scrollbar">
               {/* Header */}
               <div className="flex items-start justify-between border-b border-white/10 pb-4">
                 <div className="space-y-1">
@@ -1782,8 +1782,8 @@ export default function AdminPage() {
 
         {/* EDIT POSTED ROLE MODAL */}
         {editingJob && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md overflow-y-auto">
-            <div className="relative w-full max-w-2xl bg-[#130E14] border border-[#FF0000]/60 p-5 sm:p-8 text-left shadow-[0_0_50px_rgba(255,0,0,0.25)] space-y-5 sm:space-y-6 max-h-[88vh] overflow-y-auto my-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md overflow-hidden">
+            <div className="relative w-full max-w-2xl bg-[#130E14] border border-[#FF0000]/60 p-5 sm:p-8 text-left shadow-[0_0_50px_rgba(255,0,0,0.25)] space-y-5 sm:space-y-6 max-h-[88vh] overflow-y-auto overflow-x-hidden custom-scrollbar my-auto">
               {/* Corner Accents */}
               <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-[#FF0000]" />
               <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-[#FF0000]" />

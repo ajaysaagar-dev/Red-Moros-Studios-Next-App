@@ -321,24 +321,25 @@ export default function CareersPage() {
 
         {/* Application Modal */}
         {selectedJob && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md overflow-y-auto">
-            <div className="relative w-full max-w-2xl bg-[#151115] border border-[#FF0000]/50 p-5 sm:p-10 text-left my-auto max-h-[92vh] overflow-y-auto shadow-[0_0_50px_rgba(255,0,0,0.15)]">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md overflow-hidden">
+            <div className="relative w-full max-w-2xl bg-[#151115] border border-[#FF0000]/50 text-left my-auto max-h-[92vh] flex flex-col shadow-[0_0_50px_rgba(255,0,0,0.25)] overflow-hidden">
               {/* Corner Accents */}
-              <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-[#FF0000]" />
-              <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-[#FF0000]" />
-              <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-[#FF0000]" />
-              <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-[#FF0000]" />
+              <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-[#FF0000] z-20 pointer-events-none" />
+              <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-[#FF0000] z-20 pointer-events-none" />
+              <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-[#FF0000] z-20 pointer-events-none" />
+              <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-[#FF0000] z-20 pointer-events-none" />
 
               {/* Close Button */}
               <button
                 onClick={closeApplyModal}
-                className="absolute top-6 right-6 p-1 text-[#B8AEB1] hover:text-[#FF0000] transition-colors cursor-pointer"
+                className="absolute top-4 right-4 p-1.5 text-[#B8AEB1] hover:text-[#FF0000] hover:bg-white/5 transition-colors cursor-pointer z-20"
+                title="Close modal"
               >
                 <X className="w-5 h-5" />
               </button>
 
               {submitSuccess ? (
-                <div className="text-center py-12 space-y-4 font-mono">
+                <div className="p-8 sm:p-12 text-center space-y-4 font-mono my-auto">
                   <CheckCircle2 className="w-12 h-12 text-[#FF0000] mx-auto animate-bounce" />
                   <h3 className="text-2xl font-bold uppercase tracking-tight text-white">
                     APPLICATION TRANSMITTED
@@ -354,8 +355,9 @@ export default function CareersPage() {
                   </button>
                 </div>
               ) : (
-                <form onSubmit={handleApplicationSubmit} className="space-y-5 font-mono">
-                  <div>
+                <form onSubmit={handleApplicationSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden font-mono">
+                  {/* Sticky Modal Header */}
+                  <div className="p-5 sm:p-7 pb-4 shrink-0 border-b border-white/10 bg-[#17090D]/50 pr-12">
                     <div className="text-[10px] text-[#FF0000] uppercase tracking-widest font-bold">
                       ROLE APPLICATION
                     </div>
@@ -372,16 +374,17 @@ export default function CareersPage() {
                     </p>
                   </div>
 
+                  {/* Error Banner */}
                   {errorMessage && (
-                    <div className="p-3 bg-red-950/40 border border-red-500/50 text-red-300 text-xs flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
+                    <div className="mx-5 sm:mx-7 mt-3 p-3 bg-red-950/60 border border-red-500/50 text-red-300 text-xs flex items-center gap-2 shrink-0">
+                      <AlertCircle className="w-4 h-4 shrink-0 text-[#FF0000]" />
                       <span>{errorMessage}</span>
                     </div>
                   )}
 
-                  {/* Render ONLY the fields asked that the admin set for this role */}
+                  {/* Scrollable Fields Container with Custom Themed Scroll Slider */}
                   {selectedJob.custom_fields && selectedJob.custom_fields.length > 0 ? (
-                    <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
+                    <div className="p-5 sm:p-7 py-4 flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar space-y-4">
                       {selectedJob.custom_fields.map((field) => (
                         <div key={field.id} className="space-y-1.5">
                           <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block flex items-center justify-between">
@@ -536,19 +539,19 @@ export default function CareersPage() {
                       ))}
                     </div>
                   ) : (
-                    <div className="p-6 text-center border border-white/10 bg-[#09090C] space-y-2">
+                    <div className="p-6 text-center border border-white/10 bg-[#09090C] space-y-2 m-5 sm:m-7">
                       <div className="text-xs text-[#B8AEB1]">
                         No specific custom fields required for this role.
                       </div>
                     </div>
                   )}
 
-                  {/* Actions */}
-                  <div className="pt-4 border-t border-white/10 flex items-center justify-between">
+                  {/* Sticky Modal Actions Footer */}
+                  <div className="p-5 sm:p-7 py-4 shrink-0 border-t border-white/10 bg-[#130E14] flex items-center justify-between">
                     <button
                       type="button"
                       onClick={closeApplyModal}
-                      className="text-xs text-[#B8AEB1] hover:text-white transition-colors cursor-pointer"
+                      className="text-xs text-[#B8AEB1] hover:text-white transition-colors cursor-pointer uppercase font-bold tracking-wider"
                     >
                       CANCEL
                     </button>
