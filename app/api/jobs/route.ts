@@ -52,6 +52,9 @@ export async function POST(request: Request) {
           .map((f, idx) => ({
             id: f.id || `f_${Date.now()}_${idx}`,
             label: f.label.trim(),
+            type: f.type || "text",
+            required: !!f.required,
+            placeholder: typeof f.placeholder === "string" ? f.placeholder.trim() : "",
             value: typeof f.value === "string" ? f.value.trim() : "",
           }))
       : [];
@@ -135,6 +138,9 @@ export async function PUT(request: Request) {
           .map((f, idx) => ({
             id: f.id || `f_${Date.now()}_${idx}`,
             label: f.label.trim(),
+            type: f.type || "text",
+            required: !!f.required,
+            placeholder: typeof f.placeholder === "string" ? f.placeholder.trim() : "",
             value: typeof f.value === "string" ? f.value.trim() : "",
           }))
       : [];

@@ -10,14 +10,28 @@ import {
   CheckCircle2,
   AlertCircle,
   FileText,
+  Image as ImageIcon,
   X,
   ArrowRight,
 } from "lucide-react";
 
-interface CustomField {
+export type FieldType =
+  | "text"
+  | "email"
+  | "textarea"
+  | "url"
+  | "number"
+  | "document"
+  | "image";
+
+export interface CustomField {
   id: string;
   label: string;
-  value: string;
+  type?: FieldType;
+  required?: boolean;
+  value?: string;
+  placeholder?: string;
+  description?: string;
 }
 
 interface Job {
@@ -37,15 +51,10 @@ export default function CareersPage() {
   const [loading, setLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
-  // Application form states
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [yearsExperience, setYearsExperience] = useState<number>(3);
-  const [discordUsername, setDiscordUsername] = useState("");
-  const [portfolioLink, setPortfolioLink] = useState("");
-  const [linkedinProfile, setLinkedinProfile] = useState("");
-  const [cvFile, setCvFile] = useState<File | null>(null);
+  // Dynamic application form states
+  const [formResponses, setFormResponses] = useState<Record<string, string>>({});
+  const [fileResponses, setFileResponses] = useState<Record<string, File>>({});
+  const [candidateSummaryName, setCandidateSummaryName] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -76,33 +85,40 @@ export default function CareersPage() {
 
   const openApplyModal = (job: Job) => {
     setSelectedJob(job);
+    setFormResponses({});
+    setFileResponses({});
+    setCandidateSummaryName("");
     setSubmitSuccess(false);
     setErrorMessage("");
   };
 
   const closeApplyModal = () => {
     setSelectedJob(null);
-    setFirstName("");
-    setLastName("");
-    setEmail("");
-    setYearsExperience(3);
-    setDiscordUsername("");
-    setPortfolioLink("");
-    setLinkedinProfile("");
-    setCvFile(null);
+    setFormResponses({});
+    setFileResponses({});
+    setCandidateSummaryName("");
     setErrorMessage("");
     setSubmitSuccess(false);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (file.size > 15 * 1024 * 1024) {
-        setErrorMessage("File exceeds 15MB limit. Please upload a smaller PDF/DOC.");
-        return;
-      }
-      setCvFile(file);
-      setErrorMessage("");
+  const handleTextInputChange = (fieldId: string, val: string) => {
+    setFormResponses((prev) => ({ ...prev, [fieldId]: val }));
+  };
+
+  const handleDynamicFileChange = (fieldId: string, file: File | null) => {
+    if (file && file.size > 20 * 1024 * 1024) {
+      setErrorMessage(`File exceeds 20MB limit: ${file.name}`);
+      return;
+    }
+    setErrorMessage("");
+    if (file) {
+      setFileResponses((prev) => ({ ...prev, [fieldId]: file }));
+    } else {
+      setFileResponses((prev) => {
+        const copy = { ...prev };
+        delete copy[fieldId];
+        return copy;
+      });
     }
   };
 
@@ -110,21 +126,29 @@ export default function CareersPage() {
     e.preventDefault();
     if (!selectedJob) return;
 
-    if (!firstName.trim() || !lastName.trim()) {
-      setErrorMessage("First and Last name are required.");
-      return;
-    }
-    if (!email.trim() || !email.includes("@")) {
-      setErrorMessage("A valid email address is required.");
-      return;
-    }
-    if (!discordUsername.trim()) {
-      setErrorMessage("Discord username is mandatory.");
-      return;
-    }
-    if (!cvFile) {
-      setErrorMessage("Please upload your CV / Resume.");
-      return;
+    const fields = selectedJob.custom_fields || [];
+
+    // Validate required fields
+    for (const field of fields) {
+      const isReq = !!field.required;
+      if (isReq) {
+        if (field.type === "document" || field.type === "image") {
+          if (!fileResponses[field.id]) {
+            setErrorMessage(`${field.label} is required. Please upload a file.`);
+            return;
+          }
+        } else {
+          const val = (formResponses[field.id] || "").trim();
+          if (!val) {
+            setErrorMessage(`${field.label} is required.`);
+            return;
+          }
+          if (field.type === "email" && !val.includes("@")) {
+            setErrorMessage(`Please enter a valid email address for ${field.label}.`);
+            return;
+          }
+        }
+      }
     }
 
     try {
@@ -134,14 +158,29 @@ export default function CareersPage() {
       const formData = new FormData();
       formData.append("job_id", selectedJob.id.toString());
       formData.append("job_title", selectedJob.title);
-      formData.append("first_name", firstName.trim());
-      formData.append("last_name", lastName.trim());
-      formData.append("email", email.trim().toLowerCase());
-      formData.append("years_of_experience", yearsExperience.toString());
-      formData.append("discord_username", discordUsername.trim());
-      formData.append("portfolio_link", portfolioLink.trim());
-      formData.append("linkedin_profile", linkedinProfile.trim());
-      formData.append("cv_file", cvFile);
+
+      const payloadFields = fields.map((field) => ({
+        id: field.id,
+        label: field.label,
+        type: field.type || "text",
+        required: !!field.required,
+        value: formResponses[field.id] || "",
+      }));
+
+      formData.append("responses", JSON.stringify(payloadFields));
+
+      // Append attached files
+      Object.entries(fileResponses).forEach(([fieldId, file]) => {
+        formData.append(`file_${fieldId}`, file);
+      });
+
+      // Find display name for confirmation screen
+      const nameField = payloadFields.find(
+        (f) =>
+          f.value &&
+          (f.label.toLowerCase().includes("name") || f.type === "text")
+      );
+      setCandidateSummaryName(nameField ? nameField.value : "Candidate");
 
       const res = await fetch("/api/applications", {
         method: "POST",
@@ -298,17 +337,17 @@ export default function CareersPage() {
                     APPLICATION TRANSMITTED
                   </h3>
                   <p className="text-xs sm:text-sm text-[#B8AEB1] max-w-md mx-auto leading-relaxed">
-                    Thank you, <span className="text-white font-bold">{firstName} {lastName}</span>. Your application for <span className="text-[#FF0000] font-bold">{selectedJob.title}</span> has been saved. We will review your profile and reach out via Discord/email.
+                    Thank you, <span className="text-white font-bold">{candidateSummaryName}</span>. Your application for <span className="text-[#FF0000] font-bold">{selectedJob.title}</span> has been securely transmitted. Our recruiting team will review your dossier.
                   </p>
                   <button
                     onClick={closeApplyModal}
-                    className="mt-6 px-6 py-3 bg-[#FF0000] text-[#09090C] font-bold text-xs uppercase tracking-widest"
+                    className="mt-6 px-6 py-3 bg-[#FF0000] text-[#09090C] font-bold text-xs uppercase tracking-widest hover:bg-white transition-colors cursor-pointer"
                   >
                     CLOSE WINDOW
                   </button>
                 </div>
               ) : (
-                <form onSubmit={handleApplicationSubmit} className="space-y-6 font-mono">
+                <form onSubmit={handleApplicationSubmit} className="space-y-5 font-mono">
                   <div>
                     <div className="text-[10px] text-[#FF0000] uppercase tracking-widest font-bold">
                       ROLE APPLICATION
@@ -316,21 +355,9 @@ export default function CareersPage() {
                     <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-tight mt-0.5">
                       {selectedJob.title}
                     </h2>
-                    {selectedJob.custom_fields && selectedJob.custom_fields.length > 0 && (
-                      <div className="flex flex-wrap gap-2 pt-1.5">
-                        {selectedJob.custom_fields
-                          .filter((f) => f.value && f.value.length <= 40)
-                          .map((f) => (
-                            <span
-                              key={f.id}
-                              className="text-[10px] text-[#B8AEB1] bg-white/5 border border-white/10 px-2 py-0.5"
-                            >
-                              <span className="text-[#FF0000] font-semibold">{f.label}:</span>{" "}
-                              {f.value}
-                            </span>
-                          ))}
-                      </div>
-                    )}
+                    <p className="text-xs text-[#B8AEB1] mt-1">
+                      Please complete the fields requested by Red Moros Studios for this role.
+                    </p>
                   </div>
 
                   {errorMessage && (
@@ -340,166 +367,176 @@ export default function CareersPage() {
                     </div>
                   )}
 
-                  {/* First Name & Last Name */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block">
-                        FIRST NAME <span className="text-[#FF0000]">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        placeholder="e.g. Elena"
-                        className="w-full bg-[#09090C] border border-white/15 px-3.5 py-2.5 text-xs text-white focus:border-[#FF0000] focus:outline-none"
-                      />
-                    </div>
+                  {/* Render ONLY the fields asked that the admin set for this role */}
+                  {selectedJob.custom_fields && selectedJob.custom_fields.length > 0 ? (
+                    <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
+                      {selectedJob.custom_fields.map((field) => (
+                        <div key={field.id} className="space-y-1.5">
+                          <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block flex items-center justify-between">
+                            <span>
+                              {field.label}{" "}
+                              {field.required ? (
+                                <span className="text-[#FF0000] font-bold">* (MANDATORY)</span>
+                              ) : (
+                                <span className="text-[#B8AEB1]/50 text-[10px] font-normal">(OPTIONAL)</span>
+                              )}
+                            </span>
+                            <span className="text-[10px] text-[#FF0000]/70 uppercase tracking-widest">
+                              {field.type === "document"
+                                ? "PDF / DOC"
+                                : field.type === "image"
+                                ? "IMAGE"
+                                : field.type}
+                            </span>
+                          </label>
 
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block">
-                        LAST NAME <span className="text-[#FF0000]">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        placeholder="e.g. Vance"
-                        className="w-full bg-[#09090C] border border-white/15 px-3.5 py-2.5 text-xs text-white focus:border-[#FF0000] focus:outline-none"
-                      />
-                    </div>
-                  </div>
+                          {/* Document Upload */}
+                          {field.type === "document" && (
+                            <label className="border-2 border-dashed border-white/20 hover:border-[#FF0000] p-4 flex flex-col items-center justify-center cursor-pointer bg-[#09090C] transition-colors">
+                              <Upload className="w-5 h-5 text-[#FF0000] mb-1.5" />
+                              {fileResponses[field.id] ? (
+                                <div className="text-center space-y-1">
+                                  <div className="text-xs text-white font-bold flex items-center justify-center gap-1.5">
+                                    <FileText className="w-3.5 h-3.5 text-[#FF0000]" />
+                                    <span>{fileResponses[field.id].name}</span>
+                                  </div>
+                                  <div className="text-[10px] text-[#B8AEB1]">
+                                    {(fileResponses[field.id].size / (1024 * 1024)).toFixed(2)} MB • Click to replace
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="text-center space-y-0.5">
+                                  <span className="text-xs text-white font-medium">
+                                    Click to attach {field.label}
+                                  </span>
+                                  <div className="text-[10px] text-[#B8AEB1]">
+                                    Accepted formats: PDF, DOC, DOCX (Max 20MB)
+                                  </div>
+                                </div>
+                              )}
+                              <input
+                                type="file"
+                                accept=".pdf,.doc,.docx"
+                                onChange={(e) =>
+                                  handleDynamicFileChange(
+                                    field.id,
+                                    e.target.files && e.target.files[0] ? e.target.files[0] : null
+                                  )
+                                }
+                                className="hidden"
+                              />
+                            </label>
+                          )}
 
-                  {/* Email Address */}
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block">
-                      EMAIL ADDRESS <span className="text-[#FF0000]">* (MANDATORY)</span>
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="e.g. elena.vance@example.com"
-                      className="w-full bg-[#09090C] border border-white/15 px-3.5 py-2.5 text-xs text-white focus:border-[#FF0000] focus:outline-none"
-                    />
-                  </div>
+                          {/* Image Upload */}
+                          {field.type === "image" && (
+                            <label className="border-2 border-dashed border-white/20 hover:border-[#FF0000] p-4 flex flex-col items-center justify-center cursor-pointer bg-[#09090C] transition-colors">
+                              <ImageIcon className="w-5 h-5 text-[#FF0000] mb-1.5" />
+                              {fileResponses[field.id] ? (
+                                <div className="text-center space-y-1">
+                                  <div className="text-xs text-white font-bold flex items-center justify-center gap-1.5">
+                                    <ImageIcon className="w-3.5 h-3.5 text-[#FF0000]" />
+                                    <span>{fileResponses[field.id].name}</span>
+                                  </div>
+                                  <div className="text-[10px] text-[#B8AEB1]">
+                                    {(fileResponses[field.id].size / (1024 * 1024)).toFixed(2)} MB • Click to replace
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="text-center space-y-0.5">
+                                  <span className="text-xs text-white font-medium">
+                                    Click to attach image for {field.label}
+                                  </span>
+                                  <div className="text-[10px] text-[#B8AEB1]">
+                                    Accepted formats: PNG, JPG, JPEG, WEBP (Max 20MB)
+                                  </div>
+                                </div>
+                              )}
+                              <input
+                                type="file"
+                                accept=".png,.jpg,.jpeg,.webp"
+                                onChange={(e) =>
+                                  handleDynamicFileChange(
+                                    field.id,
+                                    e.target.files && e.target.files[0] ? e.target.files[0] : null
+                                  )
+                                }
+                                className="hidden"
+                              />
+                            </label>
+                          )}
 
-                  {/* Years of Experience Slider (0 to 20) */}
-                  <div className="space-y-2 p-4 bg-[#09090C] border border-white/10">
-                    <div className="flex items-center justify-between text-xs">
-                      <label className="text-[#B8AEB1] uppercase tracking-wider font-semibold">
-                        YEARS OF EXPERIENCE:
-                      </label>
-                      <span className="px-2.5 py-0.5 bg-[#17090D] border border-[#FF0000] text-[#FF0000] font-bold text-xs">
-                        {yearsExperience} {yearsExperience === 1 ? "YEAR" : "YEARS"}
-                      </span>
-                    </div>
+                          {/* Textarea */}
+                          {field.type === "textarea" && (
+                            <textarea
+                              rows={3}
+                              value={formResponses[field.id] || ""}
+                              onChange={(e) => handleTextInputChange(field.id, e.target.value)}
+                              placeholder={field.placeholder || `Enter ${field.label}...`}
+                              className="w-full bg-[#09090C] border border-white/15 px-3.5 py-2.5 text-xs text-white focus:border-[#FF0000] focus:outline-none placeholder:text-[#B8AEB1]/30 leading-relaxed"
+                            />
+                          )}
 
-                    <input
-                      type="range"
-                      min={0}
-                      max={20}
-                      step={1}
-                      value={yearsExperience}
-                      onChange={(e) => setYearsExperience(parseInt(e.target.value, 10))}
-                      className="w-full h-2 bg-white/10 rounded-lg cursor-pointer"
-                    />
+                          {/* Email */}
+                          {field.type === "email" && (
+                            <input
+                              type="email"
+                              value={formResponses[field.id] || ""}
+                              onChange={(e) => handleTextInputChange(field.id, e.target.value)}
+                              placeholder={field.placeholder || "e.g. name@example.com"}
+                              className="w-full bg-[#09090C] border border-white/15 px-3.5 py-2.5 text-xs text-white focus:border-[#FF0000] focus:outline-none placeholder:text-[#B8AEB1]/30"
+                            />
+                          )}
 
-                    <div className="flex justify-between text-[10px] text-[#B8AEB1]/60">
-                      <span>0 (Entry / Junior)</span>
-                      <span>10 (Lead)</span>
-                      <span>20 (Veteran / Principal)</span>
-                    </div>
-                  </div>
+                          {/* URL */}
+                          {field.type === "url" && (
+                            <input
+                              type="url"
+                              value={formResponses[field.id] || ""}
+                              onChange={(e) => handleTextInputChange(field.id, e.target.value)}
+                              placeholder={field.placeholder || "https://..."}
+                              className="w-full bg-[#09090C] border border-white/15 px-3.5 py-2.5 text-xs text-white focus:border-[#FF0000] focus:outline-none placeholder:text-[#B8AEB1]/30"
+                            />
+                          )}
 
-                  {/* Discord Username (MUST) */}
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block flex items-center justify-between">
-                      <span>
-                        DISCORD USERNAME <span className="text-[#FF0000] font-bold">* (MANDATORY)</span>
-                      </span>
-                      <span className="text-[10px] text-[#FF0000]">DIRECT COMMS</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={discordUsername}
-                      onChange={(e) => setDiscordUsername(e.target.value)}
-                      placeholder="e.g. elena_vance or spectre#1234"
-                      className="w-full bg-[#09090C] border border-white/15 px-3.5 py-2.5 text-xs text-white focus:border-[#FF0000] focus:outline-none"
-                    />
-                  </div>
+                          {/* Number */}
+                          {field.type === "number" && (
+                            <input
+                              type="number"
+                              value={formResponses[field.id] || ""}
+                              onChange={(e) => handleTextInputChange(field.id, e.target.value)}
+                              placeholder={field.placeholder || "e.g. 5"}
+                              className="w-full bg-[#09090C] border border-white/15 px-3.5 py-2.5 text-xs text-white focus:border-[#FF0000] focus:outline-none placeholder:text-[#B8AEB1]/30"
+                            />
+                          )}
 
-                  {/* Portfolio & LinkedIn */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block">
-                        PORTFOLIO / REEL / GITHUB
-                      </label>
-                      <input
-                        type="url"
-                        value={portfolioLink}
-                        onChange={(e) => setPortfolioLink(e.target.value)}
-                        placeholder="https://artstation.com/your-reel"
-                        className="w-full bg-[#09090C] border border-white/15 px-3.5 py-2.5 text-xs text-white focus:border-[#FF0000] focus:outline-none"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block">
-                        LINKEDIN PROFILE
-                      </label>
-                      <input
-                        type="url"
-                        value={linkedinProfile}
-                        onChange={(e) => setLinkedinProfile(e.target.value)}
-                        placeholder="https://linkedin.com/in/username"
-                        className="w-full bg-[#09090C] border border-white/15 px-3.5 py-2.5 text-xs text-white focus:border-[#FF0000] focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Upload CV */}
-                  <div className="space-y-2">
-                    <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block">
-                      UPLOAD CV / RESUME <span className="text-[#FF0000]">* (PDF, DOC, DOCX - MAX 15MB)</span>
-                    </label>
-
-                    <label className="border-2 border-dashed border-white/20 hover:border-[#FF0000] p-6 flex flex-col items-center justify-center cursor-pointer bg-[#09090C] transition-colors">
-                      <Upload className="w-6 h-6 text-[#FF0000] mb-2" />
-                      {cvFile ? (
-                        <div className="text-center space-y-1">
-                          <div className="text-xs text-white font-bold flex items-center justify-center gap-1.5">
-                            <FileText className="w-3.5 h-3.5 text-[#FF0000]" />
-                            <span>{cvFile.name}</span>
-                          </div>
-                          <div className="text-[10px] text-[#B8AEB1]">
-                            {(cvFile.size / (1024 * 1024)).toFixed(2)} MB • Click to replace
-                          </div>
+                          {/* Text (default) */}
+                          {(!field.type || field.type === "text") && (
+                            <input
+                              type="text"
+                              value={formResponses[field.id] || ""}
+                              onChange={(e) => handleTextInputChange(field.id, e.target.value)}
+                              placeholder={field.placeholder || `Enter ${field.label}...`}
+                              className="w-full bg-[#09090C] border border-white/15 px-3.5 py-2.5 text-xs text-white focus:border-[#FF0000] focus:outline-none placeholder:text-[#B8AEB1]/30"
+                            />
+                          )}
                         </div>
-                      ) : (
-                        <div className="text-center space-y-1">
-                          <span className="text-xs text-white font-medium">Click to upload CV document</span>
-                          <div className="text-[10px] text-[#B8AEB1]">Supported formats: PDF, DOC, DOCX</div>
-                        </div>
-                      )}
-                      <input
-                        type="file"
-                        accept=".pdf,.doc,.docx"
-                        onChange={handleFileChange}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-6 text-center border border-white/10 bg-[#09090C] space-y-2">
+                      <div className="text-xs text-[#B8AEB1]">
+                        No specific custom fields required for this role.
+                      </div>
+                    </div>
+                  )}
 
                   {/* Actions */}
                   <div className="pt-4 border-t border-white/10 flex items-center justify-between">
                     <button
                       type="button"
                       onClick={closeApplyModal}
-                      className="text-xs text-[#B8AEB1] hover:text-white transition-colors"
+                      className="text-xs text-[#B8AEB1] hover:text-white transition-colors cursor-pointer"
                     >
                       CANCEL
                     </button>
@@ -509,7 +546,7 @@ export default function CareersPage() {
                       disabled={submitting}
                       className="px-6 py-3 bg-[#FF0000] text-[#09090C] font-bold text-xs uppercase tracking-widest hover:bg-white transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
                     >
-                      <span>{submitting ? "UPLOADING CV..." : "SUBMIT APPLICATION"}</span>
+                      <span>{submitting ? "TRANSMITTING..." : "SUBMIT APPLICATION"}</span>
                       <Send className="w-3.5 h-3.5" />
                     </button>
                   </div>

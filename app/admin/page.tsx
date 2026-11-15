@@ -36,12 +36,38 @@ import {
   ArrowDown,
   ArrowUpDown,
   Pencil,
+  Image as ImageIcon,
 } from "lucide-react";
+
+export type FieldType =
+  | "text"
+  | "email"
+  | "textarea"
+  | "url"
+  | "number"
+  | "document"
+  | "image";
 
 export interface CustomField {
   id: string;
   label: string;
-  value: string;
+  type?: FieldType;
+  required?: boolean;
+  value?: string;
+  placeholder?: string;
+  description?: string;
+}
+
+export interface ApplicationFieldResponse {
+  id: string;
+  label: string;
+  type: string;
+  required?: boolean;
+  value?: string;
+  filename?: string;
+  mimetype?: string;
+  data?: string;
+  size?: number;
 }
 
 interface Job {
@@ -63,14 +89,16 @@ interface Application {
   job_id: number;
   job_title: string;
   first_name: string;
-  last_name: string;
+  last_name?: string;
   email?: string;
-  years_of_experience: number;
-  discord_username: string;
-  portfolio_link: string | null;
-  linkedin_profile: string | null;
-  cv_filename: string;
-  cv_mimetype: string;
+  years_of_experience?: number;
+  discord_username?: string;
+  portfolio_link?: string | null;
+  linkedin_profile?: string | null;
+  cv_filename?: string;
+  cv_mimetype?: string;
+  cv_data?: string;
+  responses?: ApplicationFieldResponse[];
   status: string;
   created_at: string;
 }
@@ -123,20 +151,38 @@ export default function AdminPage() {
   const [editSuccess, setEditSuccess] = useState(false);
 
   // Dynamic Field Handlers for New Job
-  const addFieldToNewJob = (defaultLabel = "") => {
+  const addFieldToNewJob = (
+    defaultLabel = "",
+    type: FieldType = "text",
+    required = true,
+    placeholder = ""
+  ) => {
     setNewCustomFields((prev) => [
       ...prev,
       {
         id: "f_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
         label: defaultLabel,
+        type,
+        required,
+        placeholder,
         value: "",
       },
     ]);
   };
 
-  const updateNewJobField = (id: string, fieldKey: "label" | "value", text: string) => {
+  const updateNewJobField = (
+    id: string,
+    key: "label" | "type" | "required" | "placeholder" | "value",
+    val: unknown
+  ) => {
     setNewCustomFields((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, [fieldKey]: text } : f))
+      prev.map((f) => (f.id === id ? { ...f, [key]: val } : f))
+    );
+  };
+
+  const toggleNewJobFieldRequired = (id: string) => {
+    setNewCustomFields((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, required: !f.required } : f))
     );
   };
 
@@ -157,20 +203,38 @@ export default function AdminPage() {
   };
 
   // Dynamic Field Handlers for Edit Job
-  const addFieldToEditJob = (defaultLabel = "") => {
+  const addFieldToEditJob = (
+    defaultLabel = "",
+    type: FieldType = "text",
+    required = true,
+    placeholder = ""
+  ) => {
     setEditCustomFields((prev) => [
       ...prev,
       {
         id: "f_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
         label: defaultLabel,
+        type,
+        required,
+        placeholder,
         value: "",
       },
     ]);
   };
 
-  const updateEditJobField = (id: string, fieldKey: "label" | "value", text: string) => {
+  const updateEditJobField = (
+    id: string,
+    key: "label" | "type" | "required" | "placeholder" | "value",
+    val: unknown
+  ) => {
     setEditCustomFields((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, [fieldKey]: text } : f))
+      prev.map((f) => (f.id === id ? { ...f, [key]: val } : f))
+    );
+  };
+
+  const toggleEditJobFieldRequired = (id: string) => {
+    setEditCustomFields((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, required: !f.required } : f))
     );
   };
 
@@ -999,21 +1063,22 @@ export default function AdminPage() {
                         QUICK PRESETS:
                       </span>
                       {[
-                        "Department",
-                        "Location",
-                        "Employment Type",
-                        "Experience Required",
-                        "Role Overview",
-                        "Tech Stack",
-                        "Compensation",
+                        { label: "Full Name", type: "text" as FieldType, req: true },
+                        { label: "Email Address", type: "email" as FieldType, req: true },
+                        { label: "Resume / CV Document", type: "document" as FieldType, req: true },
+                        { label: "Art Portfolio / Screenshots", type: "image" as FieldType, req: false },
+                        { label: "Portfolio / Reel Link", type: "url" as FieldType, req: false },
+                        { label: "Discord Handle", type: "text" as FieldType, req: true },
+                        { label: "Years of Experience", type: "number" as FieldType, req: false },
+                        { label: "Cover Letter / Notes", type: "textarea" as FieldType, req: false },
                       ].map((preset) => (
                         <button
-                          key={preset}
+                          key={preset.label}
                           type="button"
-                          onClick={() => addFieldToNewJob(preset)}
+                          onClick={() => addFieldToNewJob(preset.label, preset.type, preset.req)}
                           className="px-2 py-0.5 bg-[#09090C] border border-white/15 hover:border-[#FF0000] text-[10px] text-[#B8AEB1] hover:text-white transition-colors cursor-pointer"
                         >
-                          + {preset}
+                          + {preset.label}
                         </button>
                       ))}
                     </div>
@@ -1025,7 +1090,7 @@ export default function AdminPage() {
                           NO CUSTOM FIELDS ADDED YET
                         </div>
                         <p className="text-[10px] text-[#B8AEB1]/60 max-w-sm mx-auto">
-                          This role starts completely empty. Use the quick presets above or click &quot;ADD FIELD&quot; to define custom labels and descriptions.
+                          This role starts completely empty. Use the quick presets above or click &quot;ADD FIELD&quot; to configure document, image, or text fields with custom required/optional settings.
                         </p>
                       </div>
                     ) : (
@@ -1036,9 +1101,24 @@ export default function AdminPage() {
                             className="p-3.5 bg-[#09090C] border border-white/10 hover:border-white/20 space-y-2.5 transition-colors"
                           >
                             <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-bold text-[#FF0000] tracking-wider uppercase">
-                                FIELD #{idx + 1}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold text-[#FF0000] tracking-wider uppercase">
+                                  FIELD #{idx + 1}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleNewJobFieldRequired(field.id)}
+                                  className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer border ${
+                                    field.required
+                                      ? "bg-[#FF0000] border-[#FF0000] text-black"
+                                      : "bg-[#151115] border-white/20 text-[#B8AEB1] hover:text-white"
+                                  }`}
+                                  title="Toggle Required / Optional"
+                                >
+                                  {field.required ? "REQUIRED *" : "OPTIONAL"}
+                                </button>
+                              </div>
+
                               <div className="flex items-center gap-1">
                                 <button
                                   type="button"
@@ -1070,38 +1150,66 @@ export default function AdminPage() {
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                              {/* Field Label */}
                               <div className="space-y-1">
                                 <label className="text-[10px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
                                   FIELD LABEL / NAME
                                 </label>
                                 <input
                                   type="text"
-                                  placeholder="e.g. Department, Location, Tech Stack"
+                                  placeholder="e.g. CV Document, Art Portfolio"
                                   value={field.label}
                                   onChange={(e) =>
                                     updateNewJobField(field.id, "label", e.target.value)
                                   }
                                   required
-                                  className="w-full bg-[#151115] border border-white/15 px-3 py-2 text-white focus:border-[#FF0000] focus:outline-none"
+                                  className="w-full bg-[#151115] border border-white/15 px-3 py-2 text-white focus:border-[#FF0000] focus:outline-none text-xs"
                                 />
                               </div>
 
-                              <div className="sm:col-span-2 space-y-1">
+                              {/* Field Type */}
+                              <div className="space-y-1">
                                 <label className="text-[10px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
-                                  FIELD VALUE / DESCRIPTION
+                                  FIELD TYPE
                                 </label>
-                                <textarea
-                                  rows={
-                                    field.value.includes("\n") || field.value.length > 50
-                                      ? 3
-                                      : 1
-                                  }
-                                  placeholder="Enter value or description..."
-                                  value={field.value}
+                                <select
+                                  value={field.type || "text"}
                                   onChange={(e) =>
-                                    updateNewJobField(field.id, "value", e.target.value)
+                                    updateNewJobField(
+                                      field.id,
+                                      "type",
+                                      e.target.value as FieldType
+                                    )
                                   }
-                                  className="w-full bg-[#151115] border border-white/15 px-3 py-2 text-white focus:border-[#FF0000] focus:outline-none leading-relaxed"
+                                  className="w-full bg-[#151115] border border-white/15 px-3 py-2 text-white focus:border-[#FF0000] focus:outline-none text-xs"
+                                >
+                                  <option value="text">Text (Single-line)</option>
+                                  <option value="email">Email Address</option>
+                                  <option value="document">
+                                    Document Upload (PDF, DOC, DOCX)
+                                  </option>
+                                  <option value="image">
+                                    Image Upload (PNG, JPG, WEBP)
+                                  </option>
+                                  <option value="textarea">Textarea (Multi-line)</option>
+                                  <option value="url">Web Link / Portfolio URL</option>
+                                  <option value="number">Number / Years</option>
+                                </select>
+                              </div>
+
+                              {/* Field Help Text / Placeholder */}
+                              <div className="space-y-1">
+                                <label className="text-[10px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
+                                  HELP TEXT / PLACEHOLDER
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. Upload PDF up to 20MB..."
+                                  value={field.placeholder || ""}
+                                  onChange={(e) =>
+                                    updateNewJobField(field.id, "placeholder", e.target.value)
+                                  }
+                                  className="w-full bg-[#151115] border border-white/15 px-3 py-2 text-white focus:border-[#FF0000] focus:outline-none text-xs"
                                 />
                               </div>
                             </div>
@@ -1450,42 +1558,162 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* CV Action Card */}
-                <div className="p-5 bg-[#17090D] border border-[#FF0000]/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="text-[10px] text-[#FF0000] uppercase font-bold tracking-wider">
-                      UPLOADED CV / RESUME
-                    </div>
-                    <div className="text-sm text-white font-bold flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-[#FF0000]" />
-                      <span className="truncate max-w-[240px]">{selectedApp.cv_filename}</span>
-                    </div>
-                    <div className="text-[10px] text-[#B8AEB1]">MIME: {selectedApp.cv_mimetype}</div>
-                  </div>
+                {/* Dynamic Responses & Uploads Section */}
+                {selectedApp.responses &&
+                  Array.isArray(selectedApp.responses) &&
+                  selectedApp.responses.length > 0 && (
+                    <div className="space-y-3 pt-2">
+                      <div className="text-[10px] text-[#FF0000] uppercase font-bold tracking-wider border-b border-white/10 pb-1.5 flex items-center justify-between">
+                        <span>
+                          CANDIDATE SUBMISSIONS ({selectedApp.responses.length})
+                        </span>
+                        <span className="text-[10px] text-[#B8AEB1]">ROLE SPECIFIC DATA</span>
+                      </div>
+                      <div className="grid grid-cols-1 gap-3">
+                        {selectedApp.responses.map((resp, i) => (
+                          <div
+                            key={resp.id || i}
+                            className="p-3.5 bg-[#17090D] border border-white/10 space-y-2 text-xs"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-white uppercase text-[11px]">
+                                {resp.label}
+                              </span>
+                              <span className="text-[10px] text-[#FF0000] uppercase tracking-wider font-bold">
+                                {resp.type}
+                              </span>
+                            </div>
 
-                  <div className="flex items-center gap-2.5">
-                    {/* VIEW IN SEPARATE TAB WITHOUT DOWNLOADING */}
-                    <a
-                      href={`/api/cv/${selectedApp.id}?key=${encodeURIComponent(adminKey)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-2.5 bg-[#FF0000] text-[#09090C] hover:bg-white text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors cursor-pointer"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>VIEW IN SEPARATE TAB</span>
-                    </a>
+                            {/* If Document Upload */}
+                            {resp.type === "document" && resp.data && (
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2.5 bg-[#09090C] border border-white/10">
+                                <div className="flex items-center gap-2 truncate">
+                                  <FileText className="w-4 h-4 text-[#FF0000] shrink-0" />
+                                  <span className="text-white truncate font-medium">
+                                    {resp.filename || "Document.pdf"}
+                                  </span>
+                                  {resp.size ? (
+                                    <span className="text-[10px] text-[#B8AEB1]">
+                                      ({(resp.size / (1024 * 1024)).toFixed(2)} MB)
+                                    </span>
+                                  ) : null}
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <a
+                                    href={`data:${resp.mimetype || "application/pdf"};base64,${resp.data}`}
+                                    download={resp.filename || "document.pdf"}
+                                    className="px-3 py-1.5 bg-[#FF0000] hover:bg-white text-[#09090C] text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5"
+                                  >
+                                    <Download className="w-3 h-3" />
+                                    <span>DOWNLOAD</span>
+                                  </a>
+                                </div>
+                              </div>
+                            )}
 
-                    {/* DOWNLOAD CV BUTTON */}
-                    <a
-                      href={`/api/cv/${selectedApp.id}?action=download&key=${encodeURIComponent(adminKey)}`}
-                      download
-                      className="px-4 py-2.5 bg-[#09090C] border border-white/20 hover:border-[#FF0000] text-white text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors cursor-pointer"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>DOWNLOAD</span>
-                    </a>
+                            {/* If Image Upload */}
+                            {resp.type === "image" && resp.data && (
+                              <div className="space-y-2">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2.5 bg-[#09090C] border border-white/10">
+                                  <div className="flex items-center gap-2 truncate">
+                                    <ImageIcon className="w-4 h-4 text-[#FF0000] shrink-0" />
+                                    <span className="text-white truncate font-medium">
+                                      {resp.filename || "Artwork.png"}
+                                    </span>
+                                  </div>
+                                  <a
+                                    href={`data:${resp.mimetype || "image/png"};base64,${resp.data}`}
+                                    download={resp.filename || "artwork.png"}
+                                    className="px-3 py-1.5 bg-[#FF0000] hover:bg-white text-[#09090C] text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 self-start sm:self-auto"
+                                  >
+                                    <Download className="w-3 h-3" />
+                                    <span>DOWNLOAD IMAGE</span>
+                                  </a>
+                                </div>
+                                <div className="border border-white/10 p-2 bg-black/50 flex justify-center">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={`data:${resp.mimetype || "image/png"};base64,${resp.data}`}
+                                    alt={resp.label}
+                                    className="max-h-64 object-contain rounded"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* If URL */}
+                            {resp.type === "url" && resp.value && (
+                              <a
+                                href={
+                                  resp.value.startsWith("http")
+                                    ? resp.value
+                                    : `https://${resp.value}`
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[#FF0000] hover:underline break-all block flex items-center gap-1 font-medium"
+                              >
+                                <span>{resp.value}</span>
+                                <ExternalLink className="w-3 h-3 shrink-0" />
+                              </a>
+                            )}
+
+                            {/* If text / textarea / email / number */}
+                            {resp.type !== "document" &&
+                              resp.type !== "image" &&
+                              resp.type !== "url" && (
+                                <div className="text-[#B8AEB1] whitespace-pre-line leading-relaxed bg-[#09090C] p-2.5 border border-white/5">
+                                  {resp.value || (
+                                    <span className="italic text-white/30">
+                                      No response provided
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                {/* CV Action Card (if primary CV file exists) */}
+                {selectedApp.cv_filename && selectedApp.cv_filename !== "none" && (
+                  <div className="p-5 bg-[#17090D] border border-[#FF0000]/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="text-[10px] text-[#FF0000] uppercase font-bold tracking-wider">
+                        UPLOADED CV / RESUME
+                      </div>
+                      <div className="text-sm text-white font-bold flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-[#FF0000]" />
+                        <span className="truncate max-w-[240px]">{selectedApp.cv_filename}</span>
+                      </div>
+                      <div className="text-[10px] text-[#B8AEB1]">MIME: {selectedApp.cv_mimetype}</div>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      {/* VIEW IN SEPARATE TAB WITHOUT DOWNLOADING */}
+                      <a
+                        href={`/api/cv/${selectedApp.id}?key=${encodeURIComponent(adminKey)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2.5 bg-[#FF0000] text-[#09090C] hover:bg-white text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors cursor-pointer"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>VIEW IN SEPARATE TAB</span>
+                      </a>
+
+                      {/* DOWNLOAD CV BUTTON */}
+                      <a
+                        href={`/api/cv/${selectedApp.id}?action=download&key=${encodeURIComponent(adminKey)}`}
+                        download
+                        className="px-4 py-2.5 bg-[#09090C] border border-white/20 hover:border-[#FF0000] text-white text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>DOWNLOAD</span>
+                      </a>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Danger Zone: Delete application */}
                 <div className="p-4 bg-red-950/20 border border-red-500/30 flex items-center justify-between gap-4">
@@ -1627,21 +1855,22 @@ export default function AdminPage() {
                       QUICK PRESETS:
                     </span>
                     {[
-                      "Department",
-                      "Location",
-                      "Employment Type",
-                      "Experience Required",
-                      "Role Overview",
-                      "Tech Stack",
-                      "Compensation",
+                      { label: "Full Name", type: "text" as FieldType, req: true },
+                      { label: "Email Address", type: "email" as FieldType, req: true },
+                      { label: "Resume / CV Document", type: "document" as FieldType, req: true },
+                      { label: "Art Portfolio / Screenshots", type: "image" as FieldType, req: false },
+                      { label: "Portfolio / Reel Link", type: "url" as FieldType, req: false },
+                      { label: "Discord Handle", type: "text" as FieldType, req: true },
+                      { label: "Years of Experience", type: "number" as FieldType, req: false },
+                      { label: "Cover Letter / Notes", type: "textarea" as FieldType, req: false },
                     ].map((preset) => (
                       <button
-                        key={preset}
+                        key={preset.label}
                         type="button"
-                        onClick={() => addFieldToEditJob(preset)}
+                        onClick={() => addFieldToEditJob(preset.label, preset.type, preset.req)}
                         className="px-2 py-0.5 bg-[#09090C] border border-white/15 hover:border-[#FF0000] text-[10px] text-[#B8AEB1] hover:text-white transition-colors cursor-pointer"
                       >
-                        + {preset}
+                        + {preset.label}
                       </button>
                     ))}
                   </div>
@@ -1664,9 +1893,24 @@ export default function AdminPage() {
                           className="p-3.5 bg-[#09090C] border border-white/10 hover:border-white/20 space-y-2.5 transition-colors"
                         >
                           <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-[#FF0000] tracking-wider uppercase">
-                              FIELD #{idx + 1}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-bold text-[#FF0000] tracking-wider uppercase">
+                                FIELD #{idx + 1}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => toggleEditJobFieldRequired(field.id)}
+                                className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer border ${
+                                  field.required
+                                    ? "bg-[#FF0000] border-[#FF0000] text-black"
+                                    : "bg-[#151115] border-white/20 text-[#B8AEB1] hover:text-white"
+                                }`}
+                                title="Toggle Required / Optional"
+                              >
+                                {field.required ? "REQUIRED *" : "OPTIONAL"}
+                              </button>
+                            </div>
+
                             <div className="flex items-center gap-1">
                               <button
                                 type="button"
@@ -1698,36 +1942,66 @@ export default function AdminPage() {
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            {/* Field Label */}
                             <div className="space-y-1">
                               <label className="text-[10px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
                                 FIELD LABEL / NAME
                               </label>
                               <input
                                 type="text"
-                                placeholder="e.g. Department, Location, Tech Stack"
+                                placeholder="e.g. CV Document, Art Portfolio"
                                 value={field.label}
                                 onChange={(e) =>
                                   updateEditJobField(field.id, "label", e.target.value)
                                 }
                                 required
-                                className="w-full bg-[#151115] border border-white/15 px-3 py-2 text-white focus:border-[#FF0000] focus:outline-none"
+                                className="w-full bg-[#151115] border border-white/15 px-3 py-2 text-white focus:border-[#FF0000] focus:outline-none text-xs"
                               />
                             </div>
 
-                            <div className="sm:col-span-2 space-y-1">
+                            {/* Field Type */}
+                            <div className="space-y-1">
                               <label className="text-[10px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
-                                FIELD VALUE / DESCRIPTION
+                                FIELD TYPE
                               </label>
-                              <textarea
-                                rows={
-                                  field.value.includes("\n") || field.value.length > 50 ? 3 : 1
-                                }
-                                placeholder="Enter value or description..."
-                                value={field.value}
+                              <select
+                                value={field.type || "text"}
                                 onChange={(e) =>
-                                  updateEditJobField(field.id, "value", e.target.value)
+                                  updateEditJobField(
+                                    field.id,
+                                    "type",
+                                    e.target.value as FieldType
+                                  )
                                 }
-                                className="w-full bg-[#151115] border border-white/15 px-3 py-2 text-white focus:border-[#FF0000] focus:outline-none leading-relaxed"
+                                className="w-full bg-[#151115] border border-white/15 px-3 py-2 text-white focus:border-[#FF0000] focus:outline-none text-xs"
+                              >
+                                <option value="text">Text (Single-line)</option>
+                                <option value="email">Email Address</option>
+                                <option value="document">
+                                  Document Upload (PDF, DOC, DOCX)
+                                </option>
+                                <option value="image">
+                                  Image Upload (PNG, JPG, WEBP)
+                                </option>
+                                <option value="textarea">Textarea (Multi-line)</option>
+                                <option value="url">Web Link / Portfolio URL</option>
+                                <option value="number">Number / Years</option>
+                              </select>
+                            </div>
+
+                            {/* Field Help Text / Placeholder */}
+                            <div className="space-y-1">
+                              <label className="text-[10px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
+                                HELP TEXT / PLACEHOLDER
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="e.g. Upload PDF up to 20MB..."
+                                value={field.placeholder || ""}
+                                onChange={(e) =>
+                                  updateEditJobField(field.id, "placeholder", e.target.value)
+                                }
+                                className="w-full bg-[#151115] border border-white/15 px-3 py-2 text-white focus:border-[#FF0000] focus:outline-none text-xs"
                               />
                             </div>
                           </div>

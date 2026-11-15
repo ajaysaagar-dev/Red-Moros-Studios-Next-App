@@ -34,12 +34,28 @@ async function takeScreenshots() {
   await page.screenshot({ path: path.join(OUTPUT_DIR, "home-mobile-viewport.png"), fullPage: false });
   await page.screenshot({ path: path.join(OUTPUT_DIR, "home-mobile-full.png"), fullPage: true });
 
-  // 2. Careers Mobile
+  // 2. Careers Mobile & Apply Modal
   console.log("Navigating to Careers (390x844)...");
   await page.goto("http://localhost:3000/careers", { waitUntil: "networkidle2", timeout: 30000 });
   await new Promise((r) => setTimeout(r, 1500));
   await page.screenshot({ path: path.join(OUTPUT_DIR, "careers-mobile-viewport.png"), fullPage: false });
   await page.screenshot({ path: path.join(OUTPUT_DIR, "careers-mobile-full.png"), fullPage: true });
+
+  // 2b. Click Apply for Role to test dynamic application form (select role with document & image fields)
+  console.log("Opening Career Apply Modal...");
+  const applyButtons = await page.$$("button");
+  const matchingBtns = [];
+  for (const btn of applyButtons) {
+    const text = await page.evaluate((el) => el.textContent, btn);
+    if (text && text.includes("APPLY FOR ROLE")) {
+      matchingBtns.push(btn);
+    }
+  }
+  if (matchingBtns.length > 0) {
+    await matchingBtns[matchingBtns.length - 1].click();
+  }
+  await new Promise((r) => setTimeout(r, 1000));
+  await page.screenshot({ path: path.join(OUTPUT_DIR, "careers-apply-modal-mobile.png"), fullPage: false });
 
   // 3. Admin Lock Screen Mobile
   console.log("Navigating to Admin (390x844)...");
@@ -54,6 +70,30 @@ async function takeScreenshots() {
   await new Promise((r) => setTimeout(r, 2000));
   await page.screenshot({ path: path.join(OUTPUT_DIR, "admin-dashboard-mobile-viewport.png"), fullPage: false });
   await page.screenshot({ path: path.join(OUTPUT_DIR, "admin-dashboard-mobile-full.png"), fullPage: true });
+
+  // 4a. Click View Dossier for candidate
+  console.log("Viewing Candidate Dossier...");
+  const viewButtons = await page.$$("button");
+  for (const btn of viewButtons) {
+    const text = await page.evaluate((el) => el.textContent, btn);
+    if (text && text.trim() === "VIEW") {
+      await btn.click();
+      break;
+    }
+  }
+  await new Promise((r) => setTimeout(r, 1000));
+  await page.screenshot({ path: path.join(OUTPUT_DIR, "admin-candidate-dossier-mobile.png"), fullPage: false });
+
+  // Close dossier modal
+  const closeDossier = await page.$$("button");
+  for (const btn of closeDossier) {
+    const text = await page.evaluate((el) => el.textContent, btn);
+    if (text && text.includes("CLOSE")) {
+      await btn.click();
+      break;
+    }
+  }
+  await new Promise((r) => setTimeout(r, 500));
 
   // 4b. Switch to Post New Job tab and capture
   console.log("Switching to Post New Job tab...");

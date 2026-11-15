@@ -63,6 +63,14 @@ async function initTables() {
 
       ALTER TABLE job_applications ADD COLUMN IF NOT EXISTS email TEXT;
       ALTER TABLE job_applications ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Pending';
+      ALTER TABLE job_applications ADD COLUMN IF NOT EXISTS responses JSONB DEFAULT '[]'::jsonb;
+      ALTER TABLE job_applications ALTER COLUMN first_name DROP NOT NULL;
+      ALTER TABLE job_applications ALTER COLUMN last_name DROP NOT NULL;
+      ALTER TABLE job_applications ALTER COLUMN years_of_experience DROP NOT NULL;
+      ALTER TABLE job_applications ALTER COLUMN discord_username DROP NOT NULL;
+      ALTER TABLE job_applications ALTER COLUMN cv_filename DROP NOT NULL;
+      ALTER TABLE job_applications ALTER COLUMN cv_mimetype DROP NOT NULL;
+      ALTER TABLE job_applications ALTER COLUMN cv_data DROP NOT NULL;
       ALTER TABLE jobs ADD COLUMN IF NOT EXISTS email TEXT;
     `);
     console.log("Table 'job_applications' verified/created and schema updated.");
