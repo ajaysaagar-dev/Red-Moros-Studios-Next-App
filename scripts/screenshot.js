@@ -55,6 +55,28 @@ async function takeScreenshots() {
   await page.screenshot({ path: path.join(OUTPUT_DIR, "admin-dashboard-mobile-viewport.png"), fullPage: false });
   await page.screenshot({ path: path.join(OUTPUT_DIR, "admin-dashboard-mobile-full.png"), fullPage: true });
 
+  // 4b. Switch to Roles Catalog tab and capture
+  console.log("Switching to Roles Catalog tab...");
+  const roleTabButtons = await page.$$("button");
+  for (const btn of roleTabButtons) {
+    const text = await page.evaluate((el) => el.textContent, btn);
+    if (text && text.includes("ROLES CATALOG")) {
+      await btn.click();
+      break;
+    }
+  }
+  await new Promise((r) => setTimeout(r, 1000));
+  await page.screenshot({ path: path.join(OUTPUT_DIR, "admin-roles-mobile-full.png"), fullPage: true });
+
+  // 4c. Click first edit button to open Edit Job Modal
+  console.log("Opening Edit Job Modal...");
+  const editButtons = await page.$$('button[title="Edit role details"]');
+  if (editButtons.length > 0) {
+    await editButtons[0].click();
+    await new Promise((r) => setTimeout(r, 1000));
+    await page.screenshot({ path: path.join(OUTPUT_DIR, "admin-edit-job-modal-mobile.png"), fullPage: false });
+  }
+
   // 5. Test Compact Phone (iPhone SE: 375x667)
   await page.setViewport({
     width: 375,

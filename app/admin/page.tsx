@@ -35,6 +35,7 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
+  Pencil,
 } from "lucide-react";
 
 interface Job {
@@ -107,6 +108,18 @@ export default function AdminPage() {
   // Job Reordering state
   const [reordering, setReordering] = useState(false);
   const [reorderSuccess, setReorderSuccess] = useState("");
+
+  // Edit Job State
+  const [editingJob, setEditingJob] = useState<Job | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDepartment, setEditDepartment] = useState("Engineering");
+  const [editLocation, setEditLocation] = useState("Remote");
+  const [editType, setEditType] = useState("Full-time");
+  const [editStatus, setEditStatus] = useState("Open");
+  const [editDescription, setEditDescription] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [editSuccess, setEditSuccess] = useState(false);
 
   // Fetch jobs and applications using the verified admin key
   const fetchDataWithKey = async (key: string) => {
@@ -395,6 +408,82 @@ export default function AdminPage() {
     navigator.clipboard.writeText(email);
     setCopiedEmail(true);
     setTimeout(() => setCopiedEmail(false), 2000);
+  };
+
+  // Open Edit Job Modal
+  const openEditJobModal = (job: Job) => {
+    setEditingJob(job);
+    setEditTitle(job.title);
+    setEditDepartment(job.department || "Engineering");
+    setEditLocation(job.location || "Remote");
+    setEditType(job.type || "Full-time");
+    setEditStatus(job.status || "Open");
+    setEditDescription(job.description || "");
+    setEditError("");
+    setEditSuccess(false);
+  };
+
+  // Close Edit Job Modal
+  const closeEditJobModal = () => {
+    setEditingJob(null);
+    setEditError("");
+    setEditSuccess(false);
+  };
+
+  // Save Edited Job
+  const handleSaveEditJob = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingJob) return;
+    if (!editTitle.trim()) {
+      setEditError("Job title (role) is required.");
+      return;
+    }
+
+    try {
+      setSavingEdit(true);
+      setEditError("");
+
+      const res = await fetch("/api/jobs", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": adminKey,
+        },
+        body: JSON.stringify({
+          id: editingJob.id,
+          title: editTitle.trim(),
+          department: editDepartment,
+          location: editLocation,
+          type: editType,
+          status: editStatus,
+          description: editDescription.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.job) {
+        setJobs((prev) =>
+          prev.map((j) => (j.id === editingJob.id ? { ...j, ...data.job } : j))
+        );
+        // Also update applications list if titles changed
+        setApplications((prev) =>
+          prev.map((a) =>
+            a.job_id === editingJob.id ? { ...a, job_title: editTitle.trim() } : a
+          )
+        );
+        setEditSuccess(true);
+        setTimeout(() => {
+          closeEditJobModal();
+        }, 600);
+      } else {
+        setEditError(data.error || "Failed to update role posting.");
+      }
+    } catch (err: unknown) {
+      console.error("Save edit job error:", err);
+      setEditError("Network error while updating role.");
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   // Status badge styling helper
@@ -983,13 +1072,22 @@ export default function AdminPage() {
                               {job.application_count || 0}
                             </td>
                             <td className="py-3 px-4 text-right">
-                              <button
-                                onClick={() => handleDeleteJob(job.id)}
-                                className="p-1.5 text-[#B8AEB1] hover:text-[#FF0000] transition-colors cursor-pointer"
-                                title="Delete role"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => openEditJobModal(job)}
+                                  className="p-1.5 text-[#B8AEB1] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                                  title="Edit role details"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteJob(job.id)}
+                                  className="p-1.5 text-[#B8AEB1] hover:text-[#FF0000] hover:bg-[#FF0000]/10 transition-colors cursor-pointer"
+                                  title="Delete role"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -1263,6 +1361,171 @@ export default function AdminPage() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* EDIT POSTED ROLE MODAL */}
+        {editingJob && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md overflow-y-auto">
+            <div className="relative w-full max-w-2xl bg-[#130E14] border border-[#FF0000]/60 p-5 sm:p-8 text-left shadow-[0_0_50px_rgba(255,0,0,0.25)] space-y-5 sm:space-y-6 max-h-[88vh] overflow-y-auto my-auto">
+              {/* Corner Accents */}
+              <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-[#FF0000]" />
+              <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-[#FF0000]" />
+              <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-[#FF0000]" />
+              <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-[#FF0000]" />
+
+              {/* Header */}
+              <div className="flex items-start justify-between border-b border-white/10 pb-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#FF0000] animate-pulse" />
+                    <span className="font-mono text-[10px] text-[#FF0000] tracking-widest uppercase font-bold">
+                      ROLE CONFIGURATION // ROLE #{editingJob.id}
+                    </span>
+                  </div>
+                  <h2 className="text-2xl font-mono font-black text-white uppercase">
+                    EDIT POSTED ROLE
+                  </h2>
+                  <div className="font-mono text-xs text-[#B8AEB1]">
+                    Changes will immediately update the PostgreSQL database and public /careers listings.
+                  </div>
+                </div>
+
+                <button
+                  onClick={closeEditJobModal}
+                  className="p-1 text-[#B8AEB1] hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {editSuccess && (
+                <div className="p-3 bg-green-950/60 border border-green-500/60 text-green-300 font-mono text-xs flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-green-400" />
+                  <span>Role successfully updated and synchronized!</span>
+                </div>
+              )}
+
+              {editError && (
+                <div className="p-3 bg-red-950/60 border border-[#FF0000] text-[#FF0000] font-mono text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{editError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSaveEditJob} className="space-y-4 font-mono text-xs">
+                {/* Role Title */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
+                    ROLE TITLE <span className="text-[#FF0000]">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    required
+                    className="w-full bg-[#09090C] border border-white/15 px-3 py-2.5 text-white focus:border-[#FF0000] focus:outline-none placeholder:text-[#B8AEB1]/30"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {/* Department */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
+                      DEPARTMENT
+                    </label>
+                    <select
+                      value={editDepartment}
+                      onChange={(e) => setEditDepartment(e.target.value)}
+                      className="w-full bg-[#09090C] border border-white/15 px-3 py-2.5 text-white focus:border-[#FF0000] focus:outline-none"
+                    >
+                      <option value="Engineering">Engineering</option>
+                      <option value="Art & VFX">Art & VFX</option>
+                      <option value="Audio & Sound">Audio & Sound</option>
+                      <option value="Design">Design</option>
+                      <option value="Production">Production</option>
+                    </select>
+                  </div>
+
+                  {/* Location */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
+                      LOCATION
+                    </label>
+                    <input
+                      type="text"
+                      value={editLocation}
+                      onChange={(e) => setEditLocation(e.target.value)}
+                      placeholder="e.g. Remote / Montréal"
+                      className="w-full bg-[#09090C] border border-white/15 px-3 py-2.5 text-white focus:border-[#FF0000] focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Type */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
+                      TYPE
+                    </label>
+                    <select
+                      value={editType}
+                      onChange={(e) => setEditType(e.target.value)}
+                      className="w-full bg-[#09090C] border border-white/15 px-3 py-2.5 text-white focus:border-[#FF0000] focus:outline-none"
+                    >
+                      <option value="Full-time">Full-time</option>
+                      <option value="Contract">Contract</option>
+                      <option value="Part-time">Part-time</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Status Toggle */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
+                    POSTING STATUS
+                  </label>
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value)}
+                    className="w-full bg-[#09090C] border border-white/15 px-3 py-2.5 text-white focus:border-[#FF0000] focus:outline-none"
+                  >
+                    <option value="Open">Open (Accepting Applications on /careers)</option>
+                    <option value="Closed">Closed (Hidden from public listing)</option>
+                  </select>
+                </div>
+
+                {/* Description */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] text-[#B8AEB1] uppercase tracking-wider block font-bold">
+                    ROLE RESPONSIBILITIES & REQUIREMENTS
+                  </label>
+                  <textarea
+                    rows={5}
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    className="w-full bg-[#09090C] border border-white/15 px-3 py-2.5 text-white focus:border-[#FF0000] focus:outline-none placeholder:text-[#B8AEB1]/30 leading-relaxed"
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="sticky bottom-0 bg-[#130E14] pt-3 pb-1 border-t border-white/10 flex flex-col sm:flex-row items-center justify-end gap-2.5 sm:gap-3">
+                  <button
+                    type="button"
+                    onClick={closeEditJobModal}
+                    className="w-full sm:w-auto px-5 py-2.5 border border-white/20 text-[#B8AEB1] hover:text-white uppercase font-bold tracking-wider text-xs transition-colors cursor-pointer"
+                  >
+                    CANCEL
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingEdit}
+                    className="w-full sm:w-auto px-6 py-2.5 bg-[#FF0000] hover:bg-white text-[#09090C] uppercase font-bold tracking-widest text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>{savingEdit ? "SAVING CHANGES..." : "SAVE CHANGES"}</span>
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

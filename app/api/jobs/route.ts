@@ -75,7 +75,79 @@ export async function POST(request: Request) {
   }
 }
 
-// DELETE /api/jobs - Delete a job by id
+// PUT /api/jobs - Edit an existing job
+export async function PUT(request: Request) {
+  try {
+    const adminPassword = request.headers.get("x-admin-password");
+    if (!adminPassword || adminPassword !== process.env.ADMIN_PASSWORD) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized access: invalid admin key" },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const { id, title, description, department, location, type, status } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Job ID is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!title || !title.trim()) {
+      return NextResponse.json(
+        { success: false, error: "Job title (role) is required" },
+        { status: 400 }
+      );
+    }
+
+    const result = await query(
+      `
+      UPDATE jobs
+      SET 
+        title = $1,
+        description = $2,
+        department = $3,
+        location = $4,
+        type = $5,
+        status = $6
+      WHERE id = $7
+      RETURNING *;
+      `,
+      [
+        title.trim(),
+        description ? description.trim() : "",
+        department ? department.trim() : "Engineering",
+        location ? location.trim() : "Remote",
+        type ? type.trim() : "Full-time",
+        status ? status.trim() : "Open",
+        parseInt(id, 10),
+      ]
+    );
+
+    if (result.rows.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "Job not found" },
+        { status: 404 }
+      );
+    }
+
+    // Also update referenced job_title in job_applications so existing applications reflect the new title
+    await query("UPDATE job_applications SET job_title = $1 WHERE job_id = $2;", [
+      title.trim(),
+      parseInt(id, 10),
+    ]);
+
+    return NextResponse.json({ success: true, job: result.rows[0] });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Failed to update job";
+    console.error("PUT /api/jobs error:", error);
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: Request) {
   try {
     const adminPassword = request.headers.get("x-admin-password");
