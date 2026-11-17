@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "generate:seo": "node scripts/generate-seo-assets.js",
     "start": "next start",
     "lint": "eslint"
   },

@@ -16,13 +16,13 @@ export default function Footer() {
         {/* Brand & Narrative */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-8 border-b border-white/5">
           <div className="space-y-2 text-left">
-            <Link href="/" className="inline-block group">
+            <Link href="/" className="inline-block group" title="Red Moros Studios (RedMoros)">
               <div className="font-mono text-base font-black tracking-[0.2em] text-white uppercase group-hover:text-[#FF0000] transition-colors">
                 RED MOROS <span className="text-[#FF0000]">STUDIOS</span>
               </div>
             </Link>
-            <p className="font-mono text-xs text-[#B8AEB1] max-w-md leading-relaxed font-light">
-              A story-driven psychological horror thriller game experience with best visuals. Coming Soon.
+            <p className="font-mono text-xs text-[#B8AEB1] max-w-lg leading-relaxed font-light">
+              <strong className="text-white font-medium">Red Moros Studios</strong> (RedMoros / RedMorosStudios) — An independent studio crafting story-driven psychological horror thriller experiences and cinematic video games.
             </p>
           </div>
 
@@ -45,10 +45,19 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Legal Strip */}
+        {/* Brand Identifiers & Legal Strip */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-[10px] text-[#B8AEB1]/60">
           <div>
             © 2026 RED MOROS STUDIOS INC. ALL RIGHTS RESERVED.
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-[10px] text-[#B8AEB1]/50 tracking-wider">
+            <span>RED MOROS</span>
+            <span>•</span>
+            <span>REDMOROS</span>
+            <span>•</span>
+            <span>RED MOROS STUDIOS</span>
+            <span>•</span>
+            <span>REDMOROSSTUDIOS</span>
           </div>
         </div>
 

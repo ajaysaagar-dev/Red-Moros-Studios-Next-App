@@ -35,7 +35,8 @@ export default function CameraHero() {
             </div>
 
             {/* Giant Monolithic Brand Headline matching ref.svg */}
-            <div className="flex flex-col tracking-tighter leading-[0.88]">
+            <h1 className="flex flex-col tracking-tighter leading-[0.88]">
+              <span className="sr-only">Red Moros Studios (RedMoros / RedMorosStudios)</span>
               {/* Row 1: "RED" in White */}
               <div className="flex items-baseline gap-3 sm:gap-6 flex-wrap">
                 <span className="font-mono text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black text-white tracking-tight uppercase">
@@ -49,7 +50,7 @@ export default function CameraHero() {
                   MOROS
                 </span>
               </div>
-            </div>
+            </h1>
 
           </div>
 
